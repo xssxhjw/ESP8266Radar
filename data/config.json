@@ -1,0 +1,10 @@
+{
+  "warningGain": 1.0,
+  "detectionDistance": 50,
+  "detectionSpeed": 5,
+  "dangerDistance": 20,
+  "dangerSpeed": 25,
+  "ledBlinkMode": true,
+  "normalBlinkInterval": 800,
+  "dangerBlinkInterval": 120
+}
