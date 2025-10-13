@@ -1,6 +1,6 @@
 {
-  "warningGain": 1.0,
-  "detectionDistance": 50,
+  "warningGain": 2.0,
+  "detectionDistance": 60,
   "detectionSpeed": 5,
   "dangerDistance": 20,
   "dangerSpeed": 25,
