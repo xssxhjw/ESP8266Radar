@@ -81,6 +81,8 @@ void Radar::processTargets(uint8_t targetCount, uint8_t *data) {
         const bool approaching = data[i * 5 + 2] == 0x01;
         const uint8_t distance = data[i * 5 + 1];
         const uint8_t speed = data[i * 5 + 3];
+        //角度
+        //const int8_t angle = data[i*5] - 0x80;
         if (!approaching || distance <= 0 || distance > configMgr->getConfig().detectionDistance || speed <= 0 || speed < configMgr->getConfig().detectionSpeed || speed > 120) {
             continue;
         }
