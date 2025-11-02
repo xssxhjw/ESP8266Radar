@@ -5,14 +5,19 @@
 
 void ConfigManager::setDefaultConfig() {
     Serial.println("加载配置文件失败，使用默认配置");
-    config.warningGain = 3.0;
-    config.detectionDistance = 100;
-    config.detectionSpeed = 5;
-    config.dangerDistance = 50;
+    config.warningGain = 2.5;
+    config.detectionDistance = 45;
+    config.detectionSpeed = 10;
+    config.dangerDistance = 15;
     config.dangerSpeed = 25;
-    config.ledBlinkMode = true;
+    config.lightBlink = true;
     config.normalBlinkInterval = 800;
     config.dangerBlinkInterval = 120;
+    config.lightAngle = true;
+    config.centerAngle = 5;
+    config.blinkDuration = 2;
+    config.audioEnabled = true;
+    config.audioI2S = true;
 }
 
 bool ConfigManager::loadConfig() {
@@ -36,9 +41,14 @@ bool ConfigManager::loadConfig() {
     config.dangerDistance = doc["dangerDistance"] | config.dangerDistance;
     config.dangerSpeed = doc["dangerSpeed"] | config.dangerSpeed;
     config.warningGain = doc["warningGain"] | config.warningGain;
-    config.ledBlinkMode = doc["ledBlinkMode"] | config.ledBlinkMode;
+    config.lightBlink = doc["lightBlink"] | config.lightBlink;
     config.normalBlinkInterval = doc["normalBlinkInterval"] | config.normalBlinkInterval;
     config.dangerBlinkInterval = doc["dangerBlinkInterval"] | config.dangerBlinkInterval;
+    config.lightAngle = doc["lightAngle"] | config.lightAngle;
+    config.centerAngle = doc["centerAngle"] | config.centerAngle;
+    config.blinkDuration = doc["blinkDuration"] | config.blinkDuration;
+    config.audioEnabled = doc["audioEnabled"] | config.audioEnabled;
+    config.audioI2S = doc["audioI2S"] | config.audioI2S;
     return true;
 }
 
@@ -52,9 +62,14 @@ bool ConfigManager::saveConfig() {
     doc["dangerDistance"] = config.dangerDistance;
     doc["dangerSpeed"] = config.dangerSpeed;
     doc["warningGain"] = config.warningGain;
-    doc["ledBlinkMode"] = config.ledBlinkMode;
+    doc["lightBlink"] = config.lightBlink;
     doc["normalBlinkInterval"] = config.normalBlinkInterval;
     doc["dangerBlinkInterval"] = config.dangerBlinkInterval;
+    doc["lightAngle"] = config.lightAngle;
+    doc["centerAngle"] = config.centerAngle;
+    doc["blinkDuration"] = config.blinkDuration;
+    doc["audioEnabled"] = config.audioEnabled;
+    doc["audioI2S"] = config.audioI2S;
     File file = LittleFS.open(configFilePath, "w");
     if (!file) {
         return false;
@@ -72,9 +87,14 @@ bool ConfigManager::updateConfig(const String &jsonString) {
     config.dangerDistance = doc["dangerDistance"] | config.dangerDistance;
     config.dangerSpeed = doc["dangerSpeed"] | config.dangerSpeed;
     config.warningGain = doc["warningGain"] | config.warningGain;
-    config.ledBlinkMode = doc["ledBlinkMode"] | config.ledBlinkMode;
+    config.lightBlink = doc["lightBlink"] | config.lightBlink;
+    config.blinkDuration = doc["blinkDuration"] | config.blinkDuration;
     config.normalBlinkInterval = doc["normalBlinkInterval"] | config.normalBlinkInterval;
     config.dangerBlinkInterval = doc["dangerBlinkInterval"] | config.dangerBlinkInterval;
+    config.audioEnabled = doc["audioEnabled"] | config.audioEnabled;
+    config.audioI2S = doc["audioI2S"] | config.audioI2S;
+    config.lightAngle = doc["lightAngle"] | config.lightAngle;
+    config.centerAngle = doc["centerAngle"] | config.centerAngle;
     return saveConfig();
 }
 
@@ -89,9 +109,14 @@ String ConfigManager::getConfigJson() const {
     doc["detectionSpeed"] = config.detectionSpeed;
     doc["dangerDistance"] = config.dangerDistance;
     doc["dangerSpeed"] = config.dangerSpeed;
-    doc["ledBlinkMode"] = config.ledBlinkMode;
+    doc["lightBlink"] = config.lightBlink;
     doc["normalBlinkInterval"] = config.normalBlinkInterval;
     doc["dangerBlinkInterval"] = config.dangerBlinkInterval;
+    doc["lightAngle"] = config.lightAngle;
+    doc["centerAngle"] = config.centerAngle;
+    doc["blinkDuration"] = config.blinkDuration;
+    doc["audioEnabled"] = config.audioEnabled;
+    doc["audioI2S"] = config.audioI2S;
     String result;
     serializeJson(doc, result);
     return result;

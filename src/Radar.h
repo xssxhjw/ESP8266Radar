@@ -6,9 +6,11 @@
 #include <AudioFileSourceLittleFS.h>
 #include <AudioGeneratorMP3.h>
 #include <AudioOutputI2S.h>
+#include <AudioOutputI2SNoDAC.h>
 #include "ConfigManager.h"
 
-#define LED_PIN D1
+#define LEFT_LIGHT_PIN D1
+#define RIGHT_LIGHT_PIN D2
 
 class Radar {
 private:
@@ -16,25 +18,27 @@ private:
     ConfigManager *configMgr;
     AudioGeneratorMP3 *mp3;
     AudioFileSourceLittleFS *file;
-    AudioOutputI2S *out;
+    AudioOutput *out;
     uint8_t buffer[128];
     int bufferIndex;
-    unsigned long lastBlinkTime;
+
+    unsigned long leftLightLastBlinkTime;
+    unsigned long rightLightLastBlinkTime;
     unsigned long blinkInterval;
-    unsigned long blinkStartTime;
-    bool isLEDOn = false;
+    unsigned long leftLightOnTime;
+    unsigned long rightLightOnTime;
+    bool leftLightOn = false;
+    bool rightLightOn = false;
 
     bool parseRadarData();
 
     void processTargets(uint8_t targetCount, uint8_t *data);
 
-    void warningByDistanceAndSpeed(uint8_t distance, uint8_t speed);
+    void triggerAudioWarning(bool left, bool right,bool isDanger);
 
-    void ledWarning();
+    void triggerLightWarning(bool left, bool right, bool isDanger);
 
-    void ledBlink(bool isDanger);
-
-    void audioWarning(String audio);
+    void updateLightBehavior();
 public:
     Radar(ConfigManager *configMgr);
 

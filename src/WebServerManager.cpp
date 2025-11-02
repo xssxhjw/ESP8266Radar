@@ -1,8 +1,12 @@
 #include "WebServerManager.h"
 #include <ESP8266WiFi.h>
 #include <LittleFS.h>
+#include <Updater.h>
+#include <ArduinoJson.h>
 
 WebServerManager::WebServerManager(ConfigManager *configMgr) : server(80), configManager(configMgr) {
+    shouldRestart = false;
+    rebootAtMillis = 0;
 }
 
 
@@ -43,6 +47,14 @@ void WebServerManager::begin() {
     Serial.println("开始初始化WebServer...");
     server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
 
+    server.on("/version", HTTP_GET, [](AsyncWebServerRequest *request) {
+       String json = String("{") +
+                     "\"version\":\"" + String(FIRMWARE_VERSION) + "\"," +
+                     "\"buildTime\":\"" + String(BUILD_TIME) + "\"" +
+                     "}";
+       request->send(200, "application/json; charset=utf-8", json);
+   });
+
     server.on("/config", HTTP_GET, [this](AsyncWebServerRequest *request) {
         String config = configManager->getConfigJson();
         request->send(200, "application/json; charset=utf-8", config);
@@ -60,8 +72,27 @@ void WebServerManager::begin() {
                   }
                   if (index + len == total) {
                       // 数据接收完成，保存配置
+                      bool needReboot = false;
+                      // 尝试解析以检测关键项是否变更
+                      StaticJsonDocument<512> doc;
+                      DeserializationError err = deserializeJson(doc, body);
+                      if (!err) {
+                          const auto &oldCfg = configManager->getConfig();
+                          bool newAudioEnabled = doc["audioEnabled"].isNull() ? oldCfg.audioEnabled : (bool)doc["audioEnabled"];
+                          bool newAudioI2S = doc["audioI2S"].isNull() ? oldCfg.audioI2S : (bool)doc["audioI2S"];
+                          needReboot = (newAudioEnabled != oldCfg.audioEnabled) || (newAudioI2S != oldCfg.audioI2S);
+                      }
+
                       if (configManager->updateConfig(body)) {
-                          request->send(200, "text/plain; charset=utf-8", "配置保存成功");
+                          if (needReboot) {
+                              AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain; charset=utf-8", "配置保存成功，设备将重启");
+                              resp->addHeader("Connection", "close");
+                              request->send(resp);
+                              rebootAtMillis = millis() + 500;
+                              shouldRestart = true;
+                          } else {
+                              request->send(200, "text/plain; charset=utf-8", "配置保存成功");
+                          }
                       } else {
                           request->send(500, "text/plain; charset=utf-8", "配置保存失败");
                       }
@@ -76,9 +107,61 @@ void WebServerManager::begin() {
                   handleFileUpload(request, filename, index, data, len, final);
               });
 
+    server.on("/update", HTTP_POST,
+              [this](AsyncWebServerRequest *request) {
+                  request->send(400, "text/plain; charset=utf-8", "请以二进制上传固件文件");
+              },
+              NULL,
+              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+                  static bool updateBegun = false;
+                  static bool updateError = false;
+
+                  if (index == 0) {
+                      Serial.printf("开始接收固件，总大小: %u 字节\n", (unsigned) total);
+                      Update.runAsync(true);
+                      updateBegun = Update.begin(total);
+                      updateError = !updateBegun;
+                      if (!updateBegun) {
+                          Serial.println("Update.begin 失败");
+                      }
+                  }
+
+                  if (!updateError) {
+                      size_t written = Update.write(data, len);
+                      if (written != len) {
+                          updateError = true;
+                          Serial.printf("Update.write 失败，写入 %u/%u 字节\n", (unsigned) written, (unsigned) len);
+                      }
+                  }
+
+                  if (index + len == total) {
+                      if (!updateError && Update.end(true)) {
+                          Serial.println("固件更新成功，即将重启...");
+                          AsyncWebServerResponse *resp = request->beginResponse(
+                              200, "text/plain; charset=utf-8", "更新成功，设备将重启");
+                          resp->addHeader("Connection", "close");
+                          request->send(resp);
+                          // 在回调外延迟重启，避免在 SYS 上下文中 delay/restart 触发断言
+                          rebootAtMillis = millis() + 500;
+                          shouldRestart = true;
+                      } else {
+                          Serial.printf("固件更新失败，错误码: %d\n", (int) Update.getError());
+                          Update.end(false);
+                          request->send(500, "text/plain; charset=utf-8", "更新失败");
+                      }
+                  }
+              });
+
     server.onNotFound([](AsyncWebServerRequest *request) {
         request->send(404, "text/plain; charset=utf-8", "页面未找到");
     });
 
     server.begin();
+}
+
+void WebServerManager::loop() {
+    if (shouldRestart && millis() >= rebootAtMillis) {
+        shouldRestart = false;
+        ESP.restart();
+    }
 }

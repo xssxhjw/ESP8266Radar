@@ -1,1 +1,719 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>雷达设置</title><style>*{margin:0;padding:0;box-sizing:border-box}html,body{margin:0;padding:0;height:100%}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;padding:10px;color:#333;position:relative}.container{max-width:500px;margin:0 auto;background:rgba(255,255,255,.95);padding:20px;border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,.1);backdrop-filter:blur(10px)}h1{text-align:center;color:#4a5568;margin-bottom:30px;font-size:28px;font-weight:300}.section{margin-bottom:25px;padding:20px;background:rgba(255,255,255,.8);border-radius:15px;box-shadow:0 5px 15px rgba(0,0,0,.05)}.section h2{color:#2d3748;margin-bottom:20px;font-size:20px;font-weight:500;text-align:center}.form-group{margin-bottom:20px}label{display:block;margin-bottom:8px;font-weight:500;color:#4a5568;font-size:16px}input[type="range"]{width:100%;height:8px;border-radius:5px;background:#e2e8f0;outline:none;-webkit-appearance:none;margin:10px 0}input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:24px;height:24px;border-radius:50%;background:#667eea;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.2)}input[type="range"]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:#667eea;cursor:pointer;border:none;box-shadow:0 2px 6px rgba(0,0,0,.2)}.range-value{text-align:center;font-size:18px;font-weight:600;color:#667eea;margin-top:5px}input[type="number"]{width:100%;padding:12px;border:2px solid #e2e8f0;border-radius:10px;font-size:16px;transition:border-color .3s ease}input[type="number"]:focus{border-color:#667eea;outline:none}select{width:100%;padding:12px;border:2px solid #e2e8f0;border-radius:10px;font-size:16px;background-color:white;transition:border-color .3s ease;appearance:none;background-image:url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23667eea' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");background-repeat:no-repeat;background-position:right 12px center;background-size:16px}select:focus{border-color:#667eea;outline:none}.upload-btn{width:100%;padding:12px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;border-radius:10px;font-size:16px;font-weight:500;cursor:pointer;transition:transform .2s ease;margin-bottom:10px}.upload-btn:hover{transform:translateY(-2px)}.upload-btn:active{transform:translateY(0)}button{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:12px 24px;border:none;border-radius:10px;cursor:pointer;margin:5px;font-size:16px;font-weight:500;transition:transform .2s ease;flex:1}button:hover{transform:translateY(-2px)}button:active{transform:translateY(0)}.button-group{display:flex;gap:10px;margin-top:20px}.audio-controls{display:flex;gap:10px;margin-top:10px}.audio-controls button{flex:1}.success{color:#38a169;background:rgba(56,161,105,.1);padding:10px;border-radius:8px;text-align:center;margin:10px 0}.error{color:#e53e3e;background:rgba(229,62,62,.1);padding:10px;border-radius:8px;text-align:center;margin:10px 0}.hidden{display:none}#message{position:fixed!important;top:20px!important;left:50%!important;transform:translateX(-50%)!important;z-index:9999!important;min-width:300px;max-width:500px;padding:0;margin:0;border:none;background:transparent;display:none;transition:all .3s ease}#message.show{display:block!important}#message .success,#message .error{padding:12px 20px;border-radius:8px;text-align:center;font-weight:bold;box-shadow:0 4px 12px rgba(0,0,0,.15);margin:0;border:none}#message .success{background:#4CAF50;color:white}#message .error{background:#f44336;color:white}@media (max-width:480px){.container{margin:5px;padding:15px}h1{font-size:24px}.section{padding:15px}.button-group{flex-direction:column}button{margin:5px 0}}</style></head><body><div id="message"></div><div class="container"><h1>🎯 雷达设置</h1><div class="section"><h2>📏 基础设置</h2><div class="form-group"><label for="detectionDistance">检测距离: <span id="detectionDistanceValue">50</span> m</label><input type="range" id="detectionDistance" min="1" max="100" value="50" oninput="updateRangeValue('detectionDistance','detectionDistanceValue','m')"></div><div class="form-group"><label for="detectionSpeed">检测速度: <span id="detectionSpeedValue">5</span> km/h</label><input type="range" id="detectionSpeed" min="1" max="120" value="5" oninput="updateRangeValue('detectionSpeed','detectionSpeedValue','km/h')"></div><div class="form-group"><label for="dangerDistance">危险距离: <span id="dangerDistanceValue">20</span> m</label><input type="range" id="dangerDistance" min="1" max="50" value="20" oninput="updateRangeValue('dangerDistance','dangerDistanceValue','m')"></div><div class="form-group"><label for="dangerSpeed">危险速度: <span id="dangerSpeedValue">25</span> km/h</label><input type="range" id="dangerSpeed" min="10" max="120" value="25" oninput="updateRangeValue('dangerSpeed','dangerSpeedValue','km/h')"></div><div class="button-group"><button onclick="saveConfig()">💾 保存配置</button></div></div><div class="section"><h2>💡 灯光设置</h2><div class="form-group"><label for="ledBlinkMode">灯光模式:</label><select id="ledBlinkMode" onchange="toggleBlinkSettings()"><option value="false">常亮</option><option value="true">闪烁</option></select></div><div id="blinkSettingsContainer" style="display:none"><div class="form-group"><label for="normalBlinkInterval">普通频率 (ms):</label><input type="number" id="normalBlinkInterval" min="100" max="2000" value="800"></div><div class="form-group"><label for="dangerBlinkInterval">危险频率 (ms):</label><input type="number" id="dangerBlinkInterval" min="50" max="1000" value="120"></div></div><div class="button-group"><button onclick="saveConfig()">💾 保存配置</button></div></div><div class="section"><h2>🔊 音效设置</h2><div class="form-group"><label for="warningGain">音效音量:</label><input type="number" id="warningGain" min="0" max="10" step="0.1" value="3.0"></div><div class="form-group"><label>普通音效:</label><input type="file" id="normalAudioFile" accept=".mp3" class="hidden" onchange="uploadAudioFile('normal')"><div class="audio-controls"><button type="button" class="upload-btn" onclick="document.getElementById('normalAudioFile').click()">📁 上传音效 (MP3)</button><button type="button" class="upload-btn" onclick="playAudio('normal')">🔊 试听</button></div><div id="normalAudioStatus"></div></div><div class="form-group"><label>危险音效:</label><input type="file" id="dangerAudioFile" accept=".mp3" class="hidden" onchange="uploadAudioFile('danger')"><div class="audio-controls"><button type="button" class="upload-btn" onclick="document.getElementById('dangerAudioFile').click()">📁 上传音效 (MP3)</button><button type="button" class="upload-btn" onclick="playAudio('danger')">🔊 试听</button></div><div id="dangerAudioStatus"></div></div><div class="button-group"><button onclick="saveConfig()">💾 保存配置</button></div></div></div><script>function updateRangeValue(sliderId,valueId,unit){const slider=document.getElementById(sliderId);const valueSpan=document.getElementById(valueId);valueSpan.textContent=slider.value}function uploadAudioFile(type){const fileInput=document.getElementById(type+'AudioFile');const file=fileInput.files[0];if(!file){return}const formData=new FormData();const fileName=type==='normal'?'normal.mp3':'danger.mp3';formData.append('file',file,fileName);const statusDiv=document.getElementById(type+'AudioStatus');statusDiv.innerHTML='<div class="success">正在上传...</div>';fetch('/upload',{method:'POST',body:formData}).then(response=>response.text()).then(data=>{statusDiv.innerHTML='<div class="success">✅ 上传成功</div>';setTimeout(()=>{statusDiv.innerHTML=''},3000)}).catch(error=>{statusDiv.innerHTML='<div class="error">❌ 上传失败: '+error+'</div>'})}async function saveConfig(){const config={detectionDistance:parseInt(document.getElementById('detectionDistance').value),detectionSpeed:parseInt(document.getElementById('detectionSpeed').value),dangerDistance:parseInt(document.getElementById('dangerDistance').value),dangerSpeed:parseInt(document.getElementById('dangerSpeed').value),ledBlinkMode:document.getElementById('ledBlinkMode').value==='true',normalBlinkInterval:parseInt(document.getElementById('normalBlinkInterval').value),dangerBlinkInterval:parseInt(document.getElementById('dangerBlinkInterval').value),warningGain:parseFloat(document.getElementById('warningGain').value)};try{const response=await fetch('/config',{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify(config)});if(!response.ok)throw new Error();showMessage('✅ 配置保存成功','success')}catch(e){showMessage('❌ 配置保存失败','error')}}async function loadConfig(){try{const response=await fetch('/config');if(!response.ok)throw new Error();const config=await response.json();document.getElementById('detectionDistance').value=config.detectionDistance||50;document.getElementById('detectionSpeed').value=config.detectionSpeed||5;document.getElementById('dangerDistance').value=config.dangerDistance||20;document.getElementById('dangerSpeed').value=config.dangerSpeed||25;document.getElementById('ledBlinkMode').value=(config.ledBlinkMode||false).toString();document.getElementById('normalBlinkInterval').value=config.normalBlinkInterval||800;document.getElementById('dangerBlinkInterval').value=config.dangerBlinkInterval||120;document.getElementById('warningGain').value=config.warningGain||3.5;updateRangeValue('detectionDistance','detectionDistanceValue','m');updateRangeValue('detectionSpeed','detectionSpeedValue','km/h');updateRangeValue('dangerDistance','dangerDistanceValue','m');updateRangeValue('dangerSpeed','dangerSpeedValue','km/h');toggleBlinkSettings();showMessage('✅ 配置加载成功','success')}catch(e){showMessage('❌ 配置加载失败','error')}}function toggleBlinkSettings(){const blinkMode=document.getElementById('ledBlinkMode').value==='true';document.getElementById('blinkSettingsContainer').style.display=blinkMode?'block':'none'}function playAudio(type){const timestamp=new Date().getTime();const audioUrl=type==='normal'?`/normal.mp3?t=${timestamp}`:`/danger.mp3?t=${timestamp}`;const audio=new Audio(audioUrl);audio.play().then(()=>{showMessage(`🔊 正在播放${type==='normal'?'普通':'危险'}音效`,'success')}).catch(error=>{showMessage(`❌ 播放${type==='normal'?'普通':'危险'}音效失败`,'error')})}function showMessage(message,type){const messageDiv=document.getElementById('message');messageDiv.innerHTML=`<div class="${type}">${message}</div>`;messageDiv.classList.add('show');setTimeout(()=>{messageDiv.classList.remove('show');setTimeout(()=>{messageDiv.innerHTML=''},300)},3000)}window.onload=function(){loadConfig()};</script></body></html>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>雷达设置</title>
+    <style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box
+    }
+
+    html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 10px;
+        padding-bottom: calc(var(--footer-height) + env(safe-area-inset-bottom) + 16px);
+        color: #333;
+        position: relative
+    }
+
+    .container {
+        max-width: 500px;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, .95);
+        padding: 20px;
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, .1);
+        backdrop-filter: blur(10px)
+    }
+
+    h1 {
+        text-align: center;
+        color: #4a5568;
+        margin-bottom: 30px;
+        font-size: 28px;
+        font-weight: 300
+    }
+
+    .section {
+        margin-bottom: 25px;
+        padding: 20px;
+        background: rgba(255, 255, 255, .8);
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, .05)
+    }
+
+    .section h2 {
+        color: #2d3748;
+        margin-bottom: 20px;
+        font-size: 20px;
+        font-weight: 500;
+        text-align: center
+    }
+
+    .form-group {
+        margin-bottom: 20px
+    }
+
+    label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #4a5568;
+        font-size: 16px
+    }
+
+    input[type="range"] {
+        width: 100%;
+        height: 8px;
+        border-radius: 5px;
+        background: #e2e8f0;
+        outline: none;
+        -webkit-appearance: none;
+        margin: 10px 0
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #667eea;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, .2)
+    }
+
+    input[type="range"]::-moz-range-thumb {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #667eea;
+        cursor: pointer;
+        border: none;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, .2)
+    }
+
+    .range-value {
+        text-align: center;
+        font-size: 18px;
+        font-weight: 600;
+        color: #667eea;
+        margin-top: 5px
+    }
+
+    input[type="number"] {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 16px;
+        transition: border-color .3s ease
+    }
+
+    input[type="number"]:focus {
+        border-color: #667eea;
+        outline: none
+    }
+
+    select {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 16px;
+        background-color: white;
+        transition: border-color .3s ease;
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23667eea' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 16px
+    }
+
+    select:focus {
+        border-color: #667eea;
+        outline: none
+    }
+
+    .upload-btn {
+        width: 100%;
+        padding: 12px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: transform .2s ease;
+        margin-bottom: 10px
+    }
+
+    .upload-btn:hover {
+        transform: translateY(-2px)
+    }
+
+    .upload-btn:active {
+        transform: translateY(0)
+    }
+
+    button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        margin: 5px;
+        font-size: 16px;
+        font-weight: 500;
+        transition: transform .2s ease;
+        flex: 1
+    }
+
+    button:hover {
+        transform: translateY(-2px)
+    }
+
+    button:active {
+        transform: translateY(0)
+    }
+
+    .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px
+    }
+
+    .ota-btn {
+        background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+        color: #fff;
+        border: none;
+        box-shadow: 0 4px 12px rgba(253, 160, 133, 0.35);
+    }
+
+    .ota-btn:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.05);
+    }
+
+    .ota-btn:active {
+        transform: translateY(0);
+        filter: brightness(0.95);
+    }
+
+    .audio-controls {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px
+    }
+
+    .audio-controls button {
+        flex: 1
+    }
+
+    :root {
+        --footer-height: 64px;
+    }
+
+    .fixed-footer {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 10px 16px;
+        height: var(--footer-height);
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(6px);
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 9998;
+        display: flex;
+        align-items: center;
+    }
+
+    .fixed-footer button {
+        width: 100%;
+        height: 44px;
+    }
+
+    .section:last-of-type {
+        margin-bottom: calc(var(--footer-height) + 24px);
+    }
+
+    .success {
+        color: #38a169;
+        background: rgba(56, 161, 105, .1);
+        padding: 10px;
+        border-radius: 8px;
+        text-align: center;
+        margin: 10px 0
+    }
+
+    .error {
+        color: #e53e3e;
+        background: rgba(229, 62, 62, .1);
+        padding: 10px;
+        border-radius: 8px;
+        text-align: center;
+        margin: 10px 0
+    }
+
+    .hidden {
+        display: none
+    }
+
+    #message {
+        position: fixed !important;
+        top: 20px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        z-index: 9999 !important;
+        min-width: 300px;
+        max-width: 500px;
+        padding: 0;
+        margin: 0;
+        border: none;
+        background: transparent;
+        display: none;
+        transition: all .3s ease
+    }
+
+    #message.show {
+        display: block !important
+    }
+
+    #message .success, #message .error {
+        padding: 12px 20px;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: bold;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, .15);
+        margin: 0;
+        border: none
+    }
+
+    #message .success {
+        background: #4CAF50;
+        color: white
+    }
+
+    #message .error {
+        background: #f44336;
+        color: white
+    }
+
+    @media (max-width: 480px) {
+        .container {
+            margin: 5px;
+            padding: 15px
+        }
+
+        h1 {
+            font-size: 24px
+        }
+
+        .section {
+            padding: 15px
+        }
+
+    .button-group {
+        flex-direction: column
+    }
+
+    button {
+        margin: 5px 0
+    }
+}
+    .radio-group { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+    .radio-option { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 12px; border-radius: 6px; transition: background-color .2s; margin-bottom: 0; }
+    .radio-option:hover { background-color: rgba(0,0,0,.05); }
+    .conditional-group { transition: opacity .3s, max-height .3s; overflow: hidden; }
+    .conditional-group.hidden { opacity: 0; max-height: 0; margin: 0; padding: 0; }
+    </style>
+</head>
+<body>
+<div id="message"></div>
+<div class="container"><h1>🎯 雷达设置</h1>
+    <div class="section"><h2>📏 基础设置</h2>
+        <div class="form-group">
+            <label for="detectionDistance">检测距离: <span id="detectionDistanceValue">45</span>m</label>
+            <input type="range" id="detectionDistance" min="1" max="100" value="50" oninput="updateRangeValue('detectionDistance','detectionDistanceValue','m')">
+        </div>
+        <div class="form-group">
+            <label for="detectionSpeed">检测速度: <span id="detectionSpeedValue">10</span>
+            km/h</label><input type="range" id="detectionSpeed" min="1" max="120" value="5" oninput="updateRangeValue('detectionSpeed','detectionSpeedValue','km/h')"></div>
+        <div class="form-group">
+            <label for="dangerDistance">危险距离: <span id="dangerDistanceValue">15</span> m</label>
+            <input type="range" id="dangerDistance" min="1" max="30" value="20" oninput="updateRangeValue('dangerDistance','dangerDistanceValue','m')">
+        </div>
+        <div class="form-group">
+            <label for="dangerSpeed">危险速度: <span id="dangerSpeedValue">25</span>km/h</label>
+            <input type="range" id="dangerSpeed" min="10" max="120" value="25" oninput="updateRangeValue('dangerSpeed','dangerSpeedValue','km/h')">
+        </div>
+    </div>
+    <div class="section"><h2>🔊 音效设置</h2>
+        <div class="form-group">
+            <label>音效开关:</label>
+            <div class="radio-group">
+                <label class="radio-option">
+                    <input type="radio" name="audioEnabled" id="audioEnabledTrue" value="true" checked onchange="toggleAudioSettings()"> 启用
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="audioEnabled" id="audioEnabledFalse" value="false" onchange="toggleAudioSettings()"> 禁用
+                </label>
+            </div>
+        </div>
+        <div id="audioSettingsContainer">
+            <div class="form-group">
+                <label for="warningGain">音效音量: <span id="warningGainValue">2.5</span></label>
+                <input type="range" id="warningGain" min="0" max="3.5" step="0.1" value="2.5" oninput="updateRangeValue('warningGain','warningGainValue','')">
+            </div>
+            <div class="form-group">
+                <label>输出方式:</label>
+                <div class="radio-group">
+                    <label class="radio-option">
+                        <input type="radio" name="audioI2S" id="audioI2STrue" value="true" checked> I2S
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="audioI2S" id="audioI2SFalse" value="false"> 喇叭
+                    </label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>普通音效:</label>
+                <input type="file" id="normalAudioFile" accept=".mp3" class="hidden" onchange="uploadAudioFile('normal')">
+                <div class="audio-controls">
+                    <button type="button" class="upload-btn" onclick="document.getElementById('normalAudioFile').click()">📁上传音效 (MP3)</button>
+                    <button type="button" class="upload-btn" onclick="playAudio('normal')">🔊 试听</button>
+                </div>
+                <div id="normalAudioStatus"></div>
+            </div>
+            <div class="form-group">
+                <label>危险音效:</label>
+                <input type="file" id="dangerAudioFile" accept=".mp3" class="hidden" onchange="uploadAudioFile('danger')">
+                <div class="audio-controls">
+                    <button type="button" class="upload-btn" onclick="document.getElementById('dangerAudioFile').click()">📁上传音效 (MP3)</button>
+                    <button type="button" class="upload-btn" onclick="playAudio('danger')">🔊 试听</button>
+                </div>
+                <div id="dangerAudioStatus"></div>
+            </div>
+        </div>
+    </div>
+    <div class="section"><h2>💡 灯光设置</h2>
+        <div class="form-group">
+            <label>灯光模式:</label>
+            <div class="radio-group">
+                <label class="radio-option">
+                    <input type="radio" name="lightBlink" id="lightModeConstant" value="false" onchange="toggleBlinkSettings()"> 常亮
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="lightBlink" id="lightModeBlink" value="true" checked onchange="toggleBlinkSettings()"> 闪烁
+                </label>
+            </div>
+        </div>
+        <div id="blinkDurationGroup" class="form-group" style="display:none">
+            <label id="blinkDurationLabel" for="blinkDuration">闪烁时长: <span id="blinkDurationValue">2</span> 秒</label>
+            <input type="range" id="blinkDuration" min="1" max="5" value="2" step="1" oninput="updateRangeValue('blinkDuration','blinkDurationValue','秒')">
+        </div>
+        <div id="blinkSettingsContainer" style="display:none">
+            <div class="form-group">
+                <label for="normalBlinkInterval">普通频率 (ms):</label>
+                <input type="number" id="normalBlinkInterval" min="100" max="2000" value="800">
+            </div>
+            <div class="form-group"><label for="dangerBlinkInterval">危险频率 (ms):</label>
+                <input type="number" id="dangerBlinkInterval" min="50" max="1000" value="120">
+            </div>
+        </div>
+    </div>
+    <div class="section">
+        <h2>📐 角度设置</h2>
+        <div class="form-group">
+            <label>灯光角度:</label>
+            <div class="radio-group">
+                <label class="radio-option">
+                    <input type="radio" name="lightAngle" id="lightAngleDirectional" value="true" checked onchange="toggleAngleOptions()"> 指示左右
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="lightAngle" id="lightAngleBoth" value="false" onchange="toggleAngleOptions()"> 左右同亮
+                </label>
+            </div>
+        </div>
+        <div id="centerAngleGroup" class="form-group">
+            <label for="centerAngle">正后方角度(±): <span id="centerAngleValue">5</span> °</label>
+            <input type="range" id="centerAngle" min="0" max="5" value="5" step="1" oninput="updateRangeValue('centerAngle','centerAngleValue','°')">
+        </div>
+    </div>
+    <div class="section">
+        <h2>📦 固件更新</h2>
+        <div id="firmwareVersion" class="range-value" style="text-align:left;color:#4a5568;">当前固件版本：加载中...
+        </div>
+        <input type="file" id="firmwareFile" accept=".bin" class="hidden">
+        <div class="button-group">
+            <button class="ota-btn" onclick="selectAndUploadFirmware()">📤 选择固件</button>
+        </div>
+        <div id="otaProgress" class="range-value" style="text-align:left;color:#4a5568;"></div>
+    </div>
+</div>
+<div class="fixed-footer">
+    <button onclick="saveConfig()">💾 保存配置</button>
+</div>
+<script>
+    function updateRangeValue(sliderId, valueId, unit) {
+        const slider = document.getElementById(sliderId);
+        const valueSpan = document.getElementById(valueId);
+        valueSpan.textContent = slider.value
+    }
+
+    function uploadAudioFile(type) {
+        const fileInput = document.getElementById(type + 'AudioFile');
+        const file = fileInput.files[0];
+        if (!file) {
+            return
+        }
+        const formData = new FormData();
+        const fileName = type === 'normal' ? 'normal.mp3' : 'danger.mp3';
+        formData.append('file', file, fileName);
+        const statusDiv = document.getElementById(type + 'AudioStatus');
+        statusDiv.innerHTML = '<div class="success">正在上传...</div>';
+        fetch('/upload', {method: 'POST', body: formData}).then(response => response.text()).then(data => {
+            statusDiv.innerHTML = '<div class="success">✅ 上传成功</div>';
+            setTimeout(() => {
+                statusDiv.innerHTML = ''
+            }, 3000)
+        }).catch(error => {
+            statusDiv.innerHTML = '<div class="error">❌ 上传失败: ' + error + '</div>'
+        })
+    }
+
+    async function saveConfig() {
+        const config = {
+            detectionDistance: parseInt(document.getElementById('detectionDistance').value),
+            detectionSpeed: parseInt(document.getElementById('detectionSpeed').value),
+            dangerDistance: parseInt(document.getElementById('dangerDistance').value),
+            dangerSpeed: parseInt(document.getElementById('dangerSpeed').value),
+            lightBlink: document.getElementById('lightModeBlink').checked,
+            blinkDuration: parseFloat(document.getElementById('blinkDuration').value),
+            normalBlinkInterval: parseInt(document.getElementById('normalBlinkInterval').value),
+            dangerBlinkInterval: parseInt(document.getElementById('dangerBlinkInterval').value),
+            warningGain: parseFloat(document.getElementById('warningGain').value),
+            audioEnabled: document.getElementById('audioEnabledTrue').checked,
+            audioI2S: document.getElementById('audioI2STrue').checked,
+            lightAngle: document.getElementById('lightAngleDirectional').checked,
+            centerAngle: parseInt(document.getElementById('centerAngle').value)
+        };
+        try {
+            const response = await fetch('/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json',},
+                body: JSON.stringify(config)
+            });
+            if (!response.ok) throw new Error();
+            showMessage('✅ 配置保存成功', 'success')
+        } catch (e) {
+            showMessage('❌ 配置保存失败', 'error')
+        }
+    }
+
+    async function loadConfig() {
+        try {
+            const response = await fetch('/config');
+            if (!response.ok) throw new Error();
+            const config = await response.json();
+            document.getElementById('detectionDistance').value = config.detectionDistance || 50;
+            document.getElementById('detectionSpeed').value = config.detectionSpeed || 5;
+            document.getElementById('dangerDistance').value = config.dangerDistance || 20;
+            document.getElementById('dangerSpeed').value = config.dangerSpeed || 25;
+            const lightMode = !!(config.lightBlink || false);
+            document.getElementById('lightModeBlink').checked = lightMode;
+            document.getElementById('lightModeConstant').checked = !lightMode;
+            document.getElementById('blinkDuration').value = (config.blinkDuration !== undefined ? config.blinkDuration : 2);
+            document.getElementById('normalBlinkInterval').value = config.normalBlinkInterval || 800;
+            document.getElementById('dangerBlinkInterval').value = config.dangerBlinkInterval || 120;
+            document.getElementById('warningGain').value = config.warningGain || 3.5;
+            const audioEnabled = (config.audioEnabled !== undefined ? config.audioEnabled : true);
+            document.getElementById('audioEnabledTrue').checked = !!audioEnabled;
+            document.getElementById('audioEnabledFalse').checked = !audioEnabled;
+            const audioI2S = (config.audioI2S !== undefined ? config.audioI2S : true);
+            document.getElementById('audioI2STrue').checked = !!audioI2S;
+            document.getElementById('audioI2SFalse').checked = !audioI2S;
+            const lightAngleDirectional = (config.lightAngle !== undefined ? config.lightAngle : true);
+            document.getElementById('lightAngleDirectional').checked = !!lightAngleDirectional;
+            document.getElementById('lightAngleBoth').checked = !lightAngleDirectional;
+            document.getElementById('centerAngle').value = (config.centerAngle !== undefined ? config.centerAngle : 5);
+            updateRangeValue('detectionDistance', 'detectionDistanceValue', 'm');
+            updateRangeValue('detectionSpeed', 'detectionSpeedValue', 'km/h');
+            updateRangeValue('dangerDistance', 'dangerDistanceValue', 'm');
+            updateRangeValue('dangerSpeed', 'dangerSpeedValue', 'km/h');
+            updateRangeValue('warningGain', 'warningGainValue', '');
+            updateRangeValue('blinkDuration','blinkDurationValue','秒');
+            updateRangeValue('centerAngle','centerAngleValue','°');
+            toggleBlinkSettings();
+            toggleAudioSettings();
+            toggleAngleOptions();
+            showMessage('✅ 配置加载成功', 'success')
+        } catch (e) {
+            showMessage('❌ 配置加载失败', 'error')
+        }
+    }
+
+    function toggleBlinkSettings() {
+        const lightMode = document.getElementById('lightModeBlink').checked;
+        document.getElementById('blinkSettingsContainer').style.display = lightMode ? 'block' : 'none';
+        const labelEl = document.getElementById('blinkDurationLabel');
+        const durationValue = document.getElementById('blinkDuration').value;
+        if (labelEl) {
+            labelEl.innerHTML = `${lightMode ? '闪烁时长' : '亮灯时长'}: <span id="blinkDurationValue">${durationValue}</span> 秒`;
+        }
+    }
+
+    function toggleAngleOptions() {
+        const directional = document.getElementById('lightAngleDirectional').checked;
+        const centerGroup = document.getElementById('centerAngleGroup');
+        if (directional) {
+            centerGroup.classList.remove('hidden');
+        } else {
+            centerGroup.classList.add('hidden');
+        }
+    }
+
+    function toggleAudioSettings() {
+        const audioEnabled = document.getElementById('audioEnabledTrue').checked;
+        document.getElementById('audioSettingsContainer').style.display = audioEnabled ? 'block' : 'none';
+        const blinkDurationGroup = document.getElementById('blinkDurationGroup');
+        if (blinkDurationGroup) {
+            blinkDurationGroup.style.display = audioEnabled ? 'none' : 'block';
+        }
+    }
+
+    function playAudio(type) {
+        const timestamp = new Date().getTime();
+        const audioUrl = type === 'normal' ? `/normal.mp3?t=${timestamp}` : `/danger.mp3?t=${timestamp}`;
+        const audio = new Audio(audioUrl);
+        audio.play().then(() => {
+            showMessage(`🔊 正在播放${type === 'normal' ? '普通' : '危险'}音效`, 'success')
+        }).catch(error => {
+            showMessage(`❌ 播放${type === 'normal' ? '普通' : '危险'}音效失败`, 'error')
+        })
+    }
+
+    function showMessage(message, type) {
+        const messageDiv = document.getElementById('message');
+        messageDiv.innerHTML = `<div class="${type}">${message}</div>`;
+        messageDiv.classList.add('show');
+        setTimeout(() => {
+            messageDiv.classList.remove('show');
+            setTimeout(() => {
+                messageDiv.innerHTML = ''
+            }, 300)
+        }, 3000)
+    }
+
+    async function selectAndUploadFirmware() {
+        const input = document.getElementById('firmwareFile');
+        input.value = '';
+        input.onchange = async () => {
+            const file = input.files[0];
+            if (!file) return;
+            if (!file.name.toLowerCase().endsWith('.bin')) {
+                document.getElementById('otaProgress').innerText = '请选择 .bin 固件文件';
+                return;
+            }
+            await uploadFirmwareFile(file);
+            // 上传结束后尝试刷新版本（设备将重启，开启轮询检测）
+            await pollVersionUntil(30000, 2000);
+        };
+        input.click();
+    }
+
+    async function uploadFirmwareFile(file) {
+        const progressEl = document.getElementById('otaProgress');
+        progressEl.innerText = '开始上传固件...';
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/update', true);
+            xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    progressEl.innerText = `上传进度：${percent}%`;
+                }
+            };
+            xhr.onload = () => {
+                if (xhr.status === 200) {
+                    progressEl.innerText = '更新成功，设备将重启...正在等待设备恢复';
+                    resolve();
+                } else {
+                    progressEl.innerText = `更新失败：${xhr.responseText || xhr.status}`;
+                    reject(new Error('OTA failed'));
+                }
+            };
+            xhr.onerror = () => {
+                progressEl.innerText = '网络错误，上传失败';
+                reject(new Error('Network error'));
+            };
+            xhr.send(file);
+        });
+    }
+
+    async function fetchAndShowVersion() {
+        const el = document.getElementById('firmwareVersion');
+        try {
+            const res = await fetch('/version');
+            if (!res.ok) throw new Error('请求失败');
+            const data = await res.json();
+            const __d1 = new Date(data.buildTime);
+            const __pad1 = n => String(n).padStart(2, '0');
+            const __fmt1 = isNaN(__d1.getTime()) ? data.buildTime : `${__d1.getFullYear()}-${__pad1(__d1.getMonth() + 1)}-${__pad1(__d1.getDate())} ${__pad1(__d1.getHours())}:${__pad1(__d1.getMinutes())}:${__pad1(__d1.getSeconds())}`;
+            el.innerHTML = `<div><span style="font-weight:600;color:#2d3748">固件版本：</span><span style="color:#4a5568">${data.version}</span></div><div><span style="font-weight:600;color:#2d3748">构建时间：</span><span style="color:#718096">${__fmt1}</span></div>`;
+            return true;
+        } catch (e) {
+            el.innerText = '固件版本：获取失败';
+            return false;
+        }
+    }
+
+    async function pollVersionUntil(timeoutMs = 30000, intervalMs = 2000) {
+        const start = Date.now();
+        const progressEl = document.getElementById('otaProgress');
+        while (Date.now() - start < timeoutMs) {
+            try {
+                const res = await fetch('/version', {cache: 'no-store'});
+                if (res.ok) {
+                    const data = await res.json();
+                    const __d2 = new Date(data.buildTime);
+                    const __pad2 = n => String(n).padStart(2, '0');
+                    const __fmt2 = isNaN(__d2.getTime()) ? data.buildTime : `${__d2.getFullYear()}-${__pad2(__d2.getMonth() + 1)}-${__pad2(__d2.getDate())} ${__pad2(__d2.getHours())}:${__pad2(__d2.getMinutes())}:${__pad2(__d2.getSeconds())}`;
+                    document.getElementById('firmwareVersion').innerHTML = `<div><span style="font-weight:600;color:#2d3748">当前固件版本：</span><span style="color:#4a5568">${data.version}</span></div><div><span style="font-weight:600;color:#2d3748">构建时间：</span><span style="color:#718096">${__fmt2}</span></div>`;
+                    progressEl.innerText = '设备已重启并恢复连接';
+                    return true;
+                }
+            } catch (e) {
+                // 忽略错误，继续重试
+            }
+            await new Promise(r => setTimeout(r, intervalMs));
+        }
+        progressEl.innerText = '等待设备恢复超时，请手动刷新页面或稍后重试';
+        return false;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        fetchAndShowVersion();
+    });
+
+    window.onload = function () {
+        loadConfig()
+    };
+</script>
+</body>
+</html>

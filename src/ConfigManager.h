@@ -8,9 +8,14 @@ struct RadarConfig {
     int detectionSpeed;
     int dangerDistance;
     int dangerSpeed;
-    bool ledBlinkMode;  // true: 闪烁模式, false: 常亮模式
+    bool lightBlink;  // true: 闪烁模式, false: 常亮模式
+    int blinkDuration;  // 秒，闪烁时长
     int normalBlinkInterval;
     int dangerBlinkInterval;
+    bool lightAngle;    // true: 指示左右，false: 左右同亮
+    int centerAngle;
+    bool audioEnabled;
+    bool audioI2S;
 };
 
 class ConfigManager {

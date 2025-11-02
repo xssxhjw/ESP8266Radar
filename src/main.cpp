@@ -18,5 +18,5 @@ void setup() {
 
 void loop() {
     radar.warning();
-    yield();
+    webServer.loop();
 }

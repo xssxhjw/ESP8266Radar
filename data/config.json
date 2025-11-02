@@ -1,10 +1,15 @@
 {
-  "warningGain": 2.0,
-  "detectionDistance": 60,
-  "detectionSpeed": 5,
-  "dangerDistance": 20,
-  "dangerSpeed": 25,
-  "ledBlinkMode": true,
+  "warningGain": 2.5,
+  "detectionDistance": 45,
+  "detectionSpeed": 10,
+  "dangerDistance": 15,
+  "dangerSpeed": 30,
+  "lightBlink": true,
+  "blinkDuration": 2,
   "normalBlinkInterval": 800,
-  "dangerBlinkInterval": 120
+  "dangerBlinkInterval": 120,
+  "lightAngle": false,
+  "centerAngle": 5,
+  "audioEnabled": true,
+  "audioI2S": true
 }
