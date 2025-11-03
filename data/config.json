@@ -1,9 +1,9 @@
 {
   "warningGain": 2.5,
   "detectionDistance": 45,
-  "detectionSpeed": 10,
+  "detectionSpeed": 8,
   "dangerDistance": 15,
-  "dangerSpeed": 30,
+  "dangerSpeed": 25,
   "lightBlink": true,
   "blinkDuration": 2,
   "normalBlinkInterval": 800,

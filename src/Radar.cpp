@@ -122,8 +122,7 @@ void Radar::processTargets(uint8_t targetCount, uint8_t *data) {
         prevDistance = distance;
         prevSpeed = speed;
         prevAngle = angle;
-        if (!approaching || distance <= 0 || distance > configMgr->getConfig().detectionDistance || speed <= 0 || speed
-            < configMgr->getConfig().detectionSpeed || speed > 120 || angle <= -15 || angle >= 15) {
+        if (!approaching || distance <= 0 || distance > cfg.detectionDistance || speed <= 0 || speed < cfg.detectionSpeed || speed > 120 || angle <= -15 || angle >= 15) {
             continue;
         }
         Serial.print("Distance: ");
