@@ -1,4 +1,5 @@
 #include "WebServerManager.h"
+#include "Radar.h"
 #include <ESP8266WiFi.h>
 #include <LittleFS.h>
 #include <Updater.h>
@@ -7,6 +8,7 @@
 WebServerManager::WebServerManager(ConfigManager *configMgr) : server(80), configManager(configMgr) {
     shouldRestart = false;
     rebootAtMillis = 0;
+    radar = nullptr;
 }
 
 
@@ -58,6 +60,32 @@ void WebServerManager::begin() {
     server.on("/config", HTTP_GET, [this](AsyncWebServerRequest *request) {
         String config = configManager->getConfigJson();
         request->send(200, "application/json; charset=utf-8", config);
+    });
+
+    // 功能测试路由：左后方、右后方、正后方来车
+    server.on("/test/left", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        if (radar) {
+            radar->testWarning(true, false);
+            request->send(200, "text/plain; charset=utf-8", "已触发左后方来车预警");
+        } else {
+            request->send(500, "text/plain; charset=utf-8", "Radar 未初始化");
+        }
+    });
+    server.on("/test/right", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        if (radar) {
+            radar->testWarning(false, true);
+            request->send(200, "text/plain; charset=utf-8", "已触发右后方来车预警");
+        } else {
+            request->send(500, "text/plain; charset=utf-8", "Radar 未初始化");
+        }
+    });
+    server.on("/test/rear", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        if (radar) {
+            radar->testWarning(true, true);
+            request->send(200, "text/plain; charset=utf-8", "已触发正后方来车预警");
+        } else {
+            request->send(500, "text/plain; charset=utf-8", "Radar 未初始化");
+        }
     });
 
     server.on("/config", HTTP_POST, [this](AsyncWebServerRequest *request) {
@@ -164,4 +192,8 @@ void WebServerManager::loop() {
         shouldRestart = false;
         ESP.restart();
     }
+}
+
+void WebServerManager::setRadar(Radar *r) {
+    radar = r;
 }

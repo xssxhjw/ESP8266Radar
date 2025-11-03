@@ -455,6 +455,16 @@
         </div>
     </div>
     <div class="section">
+        <h2>🧪 功能测试</h2>
+        <div class="form-group" style="margin-top:4px;">
+            <div class="button-group">
+                <button type="button" onclick="triggerTest('left')">⬅️ 左后方来车</button>
+                <button type="button" onclick="triggerTest('right')">➡️ 右后方来车</button>
+                <button type="button" onclick="triggerTest('rear')">⬆️ 正后方来车</button>
+            </div>
+        </div>
+    </div>
+    <div class="section">
         <h2>📦 固件更新</h2>
         <div id="firmwareVersion" class="range-value" style="text-align:left;color:#4a5568;">当前固件版本：加载中...
         </div>
@@ -605,6 +615,17 @@
         }).catch(error => {
             showMessage(`❌ 播放${type === 'normal' ? '普通' : '危险'}音效失败`, 'error')
         })
+    }
+
+    async function triggerTest(type) {
+        try {
+            const res = await fetch(`/test/${type}`, {method: 'GET', cache: 'no-store'});
+            if (!res.ok) throw new Error('请求失败');
+            const text = await res.text();
+            showMessage(`✅ ${text}`, 'success');
+        } catch (e) {
+            showMessage('❌ 测试触发失败', 'error');
+        }
     }
 
     function showMessage(message, type) {

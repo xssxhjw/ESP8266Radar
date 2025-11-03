@@ -29,6 +29,10 @@ private:
     unsigned long rightLightOnTime;
     bool leftLightOn = false;
     bool rightLightOn = false;
+    
+    // 状态变量记录当前输出电平，避免使用 digitalRead
+    bool leftLightPinState = false;
+    bool rightLightPinState = false;
 
     bool parseRadarData();
 
@@ -45,6 +49,8 @@ public:
     void begin();
 
     void warning();
+
+    void testWarning(bool left, bool right);
 };
 
 #endif // RADAR_PLAYER_H

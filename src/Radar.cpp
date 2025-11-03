@@ -26,6 +26,10 @@ void Radar::begin() {
     delay(200);
     pinMode(LEFT_LIGHT_PIN, OUTPUT);
     digitalWrite(LEFT_LIGHT_PIN, LOW);
+    leftLightPinState = false;  // 初始化左灯状态变量
+    pinMode(RIGHT_LIGHT_PIN, OUTPUT);
+    digitalWrite(RIGHT_LIGHT_PIN, LOW);
+    rightLightPinState = false; // 初始化右灯状态变量
     delay(50);
     Serial.println("雷达系统初始化完成");
 }
@@ -40,12 +44,14 @@ void Radar::triggerLightWarning(bool left, bool right, bool isDanger) {
         leftLightOn = true;
         leftLightOnTime = now;
         leftLightLastBlinkTime = now;
+        leftLightPinState = true;  // 更新状态变量
         digitalWrite(LEFT_LIGHT_PIN, HIGH);
     }
     if (right) {
         rightLightOn = true;
         rightLightOnTime = now;
         rightLightLastBlinkTime = now;
+        rightLightPinState = true; // 更新状态变量
         digitalWrite(RIGHT_LIGHT_PIN, HIGH);
     }
 }
@@ -59,23 +65,63 @@ void Radar::triggerAudioWarning(bool left, bool right, bool isDanger) {
     }
     triggerLightWarning(left, right, isDanger);
     String audio = isDanger ? "/danger.mp3" : "/normal.mp3";
-    if (file != nullptr) {
-        file->close();
-        delete file;
-        file = nullptr;
-    }
     file = new AudioFileSourceLittleFS(audio.c_str());
     out->SetGain(configMgr->getConfig().warningGain);
     mp3->begin(file, out);
 }
 
+void Radar::testWarning(bool left, bool right) {
+    const auto &cfg = configMgr->getConfig();
+    // 灯光逻辑与正常预警一致
+    triggerLightWarning(left, right, true);
+
+    // 功能测试时，若开启音效，则按方向播放特定音频文件
+    if (cfg.audioEnabled) {
+        if (mp3 == nullptr) {
+            mp3 = new AudioGeneratorMP3();
+        }
+        // 若已有音频在播放，直接忽略本次测试触发，避免打断当前播放
+        if (mp3->isRunning()) {
+            return;
+        }
+
+        String audio;
+        if (left && right) {
+            audio = "/rear.mp3";   // 正后方来车
+        } else if (left) {
+            audio = "/left.mp3";   // 左后方来车
+        } else if (right) {
+            audio = "/right.mp3";  // 右后方来车
+        } else {
+            audio = "/normal.mp3"; // 兜底
+        }
+        file = new AudioFileSourceLittleFS(audio.c_str());
+        out->SetGain(cfg.warningGain);
+        mp3->begin(file, out);
+    }
+}
+
 void Radar::processTargets(uint8_t targetCount, uint8_t *data) {
     const auto &cfg = configMgr->getConfig();
+    bool hasPrev = false;
+    bool prevApproaching = false;
+    uint8_t prevDistance = 0;
+    uint8_t prevSpeed = 0;
+    int8_t prevAngle = 0;
     for (int i = 0; i < targetCount; i++) {
         const bool approaching = data[i * 5 + 2] == 0x01;
         const uint8_t distance = data[i * 5 + 1];
         const uint8_t speed = data[i * 5 + 3];
         const int8_t angle = data[i * 5] - 0x80; // 探测角度 水平±15°
+        // 与前一个目标比较，如果四个数值完全一致则忽略
+        if (hasPrev && approaching == prevApproaching && distance == prevDistance && speed == prevSpeed && angle == prevAngle) {
+            continue;
+        }
+        hasPrev = true;
+        prevApproaching = approaching;
+        prevDistance = distance;
+        prevSpeed = speed;
+        prevAngle = angle;
         if (!approaching || distance <= 0 || distance > configMgr->getConfig().detectionDistance || speed <= 0 || speed
             < configMgr->getConfig().detectionSpeed || speed > 120 || angle <= -15 || angle >= 15) {
             continue;
@@ -161,10 +207,12 @@ void Radar::updateLightBehavior() {
         // 达到持续时长后，结束预警并熄灭
         if (now - leftLightOnTime >= durationMs) {
             leftLightOn = false;
-            digitalWrite(LEFT_LIGHT_PIN, LOW);;
+            leftLightPinState = false;  // 同步更新状态变量
+            digitalWrite(LEFT_LIGHT_PIN, LOW);
         }
         if (now - rightLightOnTime >= durationMs) {
             rightLightOn = false;
+            rightLightPinState = false; // 同步更新状态变量
             digitalWrite(RIGHT_LIGHT_PIN, LOW);
         }
     }
@@ -174,11 +222,13 @@ void Radar::updateLightBehavior() {
     // 闪烁模式的周期切换
     if (cfg.lightBlink) {
         if (leftLightOn && (now - leftLightLastBlinkTime >= blinkInterval)) {
-            digitalWrite(LEFT_LIGHT_PIN, !digitalRead(LEFT_LIGHT_PIN));
+            leftLightPinState = !leftLightPinState;  // 使用状态变量翻转
+            digitalWrite(LEFT_LIGHT_PIN, leftLightPinState ? HIGH : LOW);
             leftLightLastBlinkTime = now;
         }
         if (rightLightOn && (now - rightLightLastBlinkTime >= blinkInterval)) {
-            digitalWrite(RIGHT_LIGHT_PIN, !digitalRead(RIGHT_LIGHT_PIN));
+            rightLightPinState = !rightLightPinState; // 使用状态变量翻转
+            digitalWrite(RIGHT_LIGHT_PIN, rightLightPinState ? HIGH : LOW);
             rightLightLastBlinkTime = now;
         }
     }
@@ -188,9 +238,15 @@ void Radar::warning() {
     if (configMgr->getConfig().audioEnabled) {
         if (mp3 != nullptr && mp3->isRunning() && !mp3->loop()) {
             mp3->stop();
+            if (file != nullptr) {
+                file->close();
+                delete file;
+            }
             file = nullptr;
             leftLightOn = false;
             rightLightOn = false;
+            leftLightPinState = false;   // 同步更新状态变量
+            rightLightPinState = false;  // 同步更新状态变量
             digitalWrite(LEFT_LIGHT_PIN, LOW);
             digitalWrite(RIGHT_LIGHT_PIN, LOW);
         }
