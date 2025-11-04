@@ -20,11 +20,11 @@ static void startConfigMode() {
     configMode = true;
     // 启动 AP 并启动配置网页服务（在 WebServerManager::begin 内部完成）
     webServer.begin();
-    Serial.println("配置模式已开启：请连接 AP 'Radar'，访问 192.168.4.1");
+    // Serial.println("配置模式已开启：请连接 AP 'Radar'，访问 192.168.4.1");
 }
 
 static void stopConfigMode() {
-    Serial.println("配置模式已关闭，WiFi关闭以节省资源");
+    // Serial.println("配置模式已关闭，WiFi关闭以节省资源");
     // 关闭 AP / WiFi，释放无线资源
     WiFi.softAPdisconnect(true);
     WiFi.disconnect(true);
@@ -43,14 +43,11 @@ void setup() {
     btn.attachLongPressStart([] {
         ESP.restart();
     });
-    btn.attachMultiClick([] {
-        int clickNumber = btn.getNumberClicks();
-        if (clickNumber >= 5) {
-            if (!configMode) {
-                startConfigMode();
-            } else {
-                stopConfigMode();
-            }
+    btn.attachClick([] {
+        if (!configMode) {
+            startConfigMode();
+        } else {
+            stopConfigMode();
         }
     });
 }
@@ -59,4 +56,5 @@ void loop() {
     radar.warning();
     webServer.loop();
     btn.tick();
+    yield();
 }

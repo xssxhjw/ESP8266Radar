@@ -12,7 +12,7 @@ Radar::Radar(ConfigManager *config) {
 }
 
 void Radar::begin() {
-    Serial.println("开始初始化雷达系统...");
+    // Serial.println("开始初始化雷达系统...");
     delay(100);
     radarSerial->begin(115200);
     const auto &cfg = configMgr->getConfig();
@@ -31,7 +31,7 @@ void Radar::begin() {
     digitalWrite(RIGHT_LIGHT_PIN, LOW);
     rightLightPinState = false; // 初始化右灯状态变量
     delay(50);
-    Serial.println("雷达系统初始化完成");
+    // Serial.println("雷达系统初始化完成");
 }
 
 void Radar::triggerLightWarning(bool left, bool right, bool isDanger) {
@@ -125,13 +125,13 @@ void Radar::processTargets(uint8_t targetCount, uint8_t *data) {
         if (!approaching || distance <= 0 || distance > cfg.detectionDistance || speed <= 0 || speed < cfg.detectionSpeed || speed > 120 || angle <= -15 || angle >= 15) {
             continue;
         }
-        Serial.print("Distance: ");
-        Serial.print(distance);
-        Serial.print(", Speed: ");
-        Serial.print(speed);
-        Serial.print(", Angle: ");
-        Serial.print(angle);
-        Serial.println("");
+        // Serial.print("Distance: ");
+        // Serial.print(distance);
+        // Serial.print(", Speed: ");
+        // Serial.print(speed);
+        // Serial.print(", Angle: ");
+        // Serial.print(angle);
+        // Serial.println("");
         const bool isDanger = (distance <= cfg.dangerDistance) || (speed >= cfg.dangerSpeed);
         // 根据角度区分方向：左后方、右后方、正后方
         const int8_t centerAngle = (int8_t) cfg.centerAngle; // 中心阈值（±centerAngle° 视为正后方）
@@ -262,6 +262,7 @@ void Radar::warning() {
         if (parseRadarData()) {
             // 数据解析成功，重置缓冲区
             bufferIndex = 0;
+            yield();
         }
     }
     updateLightBehavior();

@@ -35,7 +35,7 @@ void WebServerManager::handleFileUpload(AsyncWebServerRequest *request, String f
 }
 
 void initWiFi() {
-    Serial.println("开始初始化WiFi...");
+    // Serial.println("开始初始化WiFi...");
     IPAddress local_IP(192, 168, 4, 1);
     IPAddress gateway(192, 168, 4, 1);
     IPAddress subnet(255, 255, 255, 0);
@@ -46,7 +46,7 @@ void initWiFi() {
 
 void WebServerManager::begin() {
     initWiFi();
-    Serial.println("开始初始化WebServer...");
+    // Serial.println("开始初始化WebServer...");
     server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
 
     server.on("/version", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -145,12 +145,12 @@ void WebServerManager::begin() {
                   static bool updateError = false;
 
                   if (index == 0) {
-                      Serial.printf("开始接收固件，总大小: %u 字节\n", (unsigned) total);
+                      // Serial.printf("开始接收固件，总大小: %u 字节\n", (unsigned) total);
                       Update.runAsync(true);
                       updateBegun = Update.begin(total);
                       updateError = !updateBegun;
                       if (!updateBegun) {
-                          Serial.println("Update.begin 失败");
+                          // Serial.println("Update.begin 失败");
                       }
                   }
 
@@ -158,13 +158,13 @@ void WebServerManager::begin() {
                       size_t written = Update.write(data, len);
                       if (written != len) {
                           updateError = true;
-                          Serial.printf("Update.write 失败，写入 %u/%u 字节\n", (unsigned) written, (unsigned) len);
+                          // Serial.printf("Update.write 失败，写入 %u/%u 字节\n", (unsigned) written, (unsigned) len);
                       }
                   }
 
                   if (index + len == total) {
                       if (!updateError && Update.end(true)) {
-                          Serial.println("固件更新成功，即将重启...");
+                          // Serial.println("固件更新成功，即将重启...");
                           AsyncWebServerResponse *resp = request->beginResponse(
                               200, "text/plain; charset=utf-8", "更新成功，设备将重启");
                           resp->addHeader("Connection", "close");
@@ -173,7 +173,7 @@ void WebServerManager::begin() {
                           rebootAtMillis = millis() + 500;
                           shouldRestart = true;
                       } else {
-                          Serial.printf("固件更新失败，错误码: %d\n", (int) Update.getError());
+                          // Serial.printf("固件更新失败，错误码: %d\n", (int) Update.getError());
                           Update.end(false);
                           request->send(500, "text/plain; charset=utf-8", "更新失败");
                       }
