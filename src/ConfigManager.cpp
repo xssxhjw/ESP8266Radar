@@ -4,7 +4,7 @@
 
 
 void ConfigManager::setDefaultConfig() {
-    Serial.println("加载配置文件失败，使用默认配置");
+    //Serial.println("加载配置文件失败，使用默认配置");
     config.warningGain = 2.5;
     config.detectionDistance = 45;
     config.detectionSpeed = 10;
@@ -21,8 +21,8 @@ void ConfigManager::setDefaultConfig() {
 }
 
 bool ConfigManager::loadConfig() {
-    Serial.println();
-    Serial.println("开始加载配置文件");
+    // Serial.println();
+    // Serial.println("开始加载配置文件");
     if (!LittleFS.begin()) {
         setDefaultConfig();
         return true;

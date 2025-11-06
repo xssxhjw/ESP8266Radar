@@ -12,6 +12,14 @@
 #define LEFT_LIGHT_PIN D1
 #define RIGHT_LIGHT_PIN D2
 
+struct RadarTarget {
+    bool approaching;
+    uint8_t distance;
+    uint8_t speed;
+    int8_t angle;
+    unsigned long timestamp;
+};
+
 class Radar {
 private:
     SoftwareSerial *radarSerial;
@@ -33,6 +41,10 @@ private:
     // 状态变量记录当前输出电平，避免使用 digitalRead
     bool leftLightPinState = false;
     bool rightLightPinState = false;
+
+    // 全局最近一次目标
+    bool hasLastTarget = false;
+    RadarTarget lastTarget;
 
     bool parseRadarData();
 

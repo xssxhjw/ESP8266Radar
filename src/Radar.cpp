@@ -103,36 +103,36 @@ void Radar::testWarning(bool left, bool right) {
 
 void Radar::processTargets(uint8_t targetCount, uint8_t *data) {
     const auto &cfg = configMgr->getConfig();
-    bool hasPrev = false;
-    bool prevApproaching = false;
-    uint8_t prevDistance = 0;
-    uint8_t prevSpeed = 0;
-    int8_t prevAngle = 0;
+    bool hasPreTarget = false;
+    RadarTarget preTarget;
+    const unsigned long now = millis();
     for (int i = 0; i < targetCount; i++) {
-        const bool approaching = data[i * 5 + 2] == 0x01;
-        const uint8_t distance = data[i * 5 + 1];
-        const uint8_t speed = data[i * 5 + 3];
-        const int8_t angle = data[i * 5] - 0x80; // 探测角度 水平±15°
-        // 与前一个目标比较，如果四个数值完全一致则忽略
-        if (hasPrev && approaching == prevApproaching && distance == prevDistance && speed == prevSpeed && angle == prevAngle) {
+        // 使用 RadarTarget 结构体封装本次目标
+        RadarTarget target = {
+            data[i * 5 + 2] == 0x01,
+            data[i * 5 + 1],
+            data[i * 5 + 3],
+            (int8_t)(data[i * 5] - 0x80),
+            now
+        };
+        //忽略不符目标
+        if (!target.approaching || target.distance <= 0 || target.distance > cfg.detectionDistance || target.speed <= 0 || target.speed < cfg.detectionSpeed || target.speed > 120 || target.angle <= -12 || target.angle >= 12) {
             continue;
         }
-        hasPrev = true;
-        prevApproaching = approaching;
-        prevDistance = distance;
-        prevSpeed = speed;
-        prevAngle = angle;
-        if (!approaching || distance <= 0 || distance > cfg.detectionDistance || speed <= 0 || speed < cfg.detectionSpeed || speed > 120 || angle <= -15 || angle >= 15) {
+        // 与前一个目标比较，如果完全一致则忽略
+        if (hasPreTarget &&  target.distance == preTarget.distance && target.speed == preTarget.speed && target.angle == preTarget.angle) {
             continue;
         }
-        // Serial.print("Distance: ");
-        // Serial.print(distance);
-        // Serial.print(", Speed: ");
-        // Serial.print(speed);
-        // Serial.print(", Angle: ");
-        // Serial.print(angle);
-        // Serial.println("");
-        const bool isDanger = (distance <= cfg.dangerDistance) || (speed >= cfg.dangerSpeed);
+        // 与上一次全局探测比较：若时间间隔<1秒则忽略
+        if (hasLastTarget && (now - lastTarget.timestamp) < 1000UL) {
+            continue;
+        }
+        hasPreTarget = true;
+        preTarget = target;
+        // 更新全局最近一次目标（用于1秒内重复去重）
+        hasLastTarget = true;
+        lastTarget = target;
+        const bool isDanger = (target.distance <= cfg.dangerDistance) || (target.speed >= cfg.dangerSpeed);
         // 根据角度区分方向：左后方、右后方、正后方
         const int8_t centerAngle = (int8_t) cfg.centerAngle; // 中心阈值（±centerAngle° 视为正后方）
         bool left = false;
@@ -142,9 +142,9 @@ void Radar::processTargets(uint8_t targetCount, uint8_t *data) {
             left = true;
             right = true;
         } else {
-            if (angle <= -centerAngle) {
+            if (target.angle <= -centerAngle) {
                 left = true;
-            } else if (angle >= centerAngle) {
+            } else if (target.angle >= centerAngle) {
                 right = true;
             } else {
                 // 正后方同时预警左右灯
