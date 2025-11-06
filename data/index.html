@@ -408,6 +408,33 @@
                 </div>
                 <div id="dangerAudioStatus"></div>
             </div>
+            <div class="form-group">
+                <label>左后方音效:</label>
+                <input type="file" id="leftAudioFile" accept=".mp3" class="hidden" onchange="uploadAudioFile('left')">
+                <div class="audio-controls">
+                    <button type="button" class="upload-btn" onclick="document.getElementById('leftAudioFile').click()">📁上传音效 (MP3)</button>
+                    <button type="button" class="upload-btn" onclick="playAudio('left')">🔊 试听</button>
+                </div>
+                <div id="leftAudioStatus"></div>
+            </div>
+            <div class="form-group">
+                <label>右后方音效:</label>
+                <input type="file" id="rightAudioFile" accept=".mp3" class="hidden" onchange="uploadAudioFile('right')">
+                <div class="audio-controls">
+                    <button type="button" class="upload-btn" onclick="document.getElementById('rightAudioFile').click()">📁上传音效 (MP3)</button>
+                    <button type="button" class="upload-btn" onclick="playAudio('right')">🔊 试听</button>
+                </div>
+                <div id="rightAudioStatus"></div>
+            </div>
+            <div class="form-group">
+                <label>正后方音效:</label>
+                <input type="file" id="rearAudioFile" accept=".mp3" class="hidden" onchange="uploadAudioFile('rear')">
+                <div class="audio-controls">
+                    <button type="button" class="upload-btn" onclick="document.getElementById('rearAudioFile').click()">📁上传音效 (MP3)</button>
+                    <button type="button" class="upload-btn" onclick="playAudio('rear')">🔊 试听</button>
+                </div>
+                <div id="rearAudioStatus"></div>
+            </div>
         </div>
     </div>
     <div class="section"><h2>💡 灯光设置</h2>
@@ -468,6 +495,17 @@
         <h2>📦 固件更新</h2>
         <div id="firmwareVersion" class="range-value" style="text-align:left;color:#4a5568;">当前固件版本：加载中...
         </div>
+        <div class="form-group">
+            <label>固件类型:</label>
+            <div class="radio-group">
+                <label class="radio-option">
+                    <input type="radio" name="firmwareType" id="firmwareTypeProgram" value="flash" checked> 程序
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="firmwareType" id="firmwareTypeFiles" value="fs"> 文件
+                </label>
+            </div>
+        </div>
         <input type="file" id="firmwareFile" accept=".bin" class="hidden">
         <div class="button-group">
             <button class="ota-btn" onclick="selectAndUploadFirmware()">📤 选择固件</button>
@@ -492,7 +530,14 @@
             return
         }
         const formData = new FormData();
-        const fileName = type === 'normal' ? 'normal.mp3' : 'danger.mp3';
+        const nameMap = {
+            normal: 'normal.mp3',
+            danger: 'danger.mp3',
+            left: 'left.mp3',
+            right: 'right.mp3',
+            rear: 'rear.mp3'
+        };
+        const fileName = nameMap[type] || 'normal.mp3';
         formData.append('file', file, fileName);
         const statusDiv = document.getElementById(type + 'AudioStatus');
         statusDiv.innerHTML = '<div class="success">正在上传...</div>';
@@ -608,12 +653,29 @@
 
     function playAudio(type) {
         const timestamp = new Date().getTime();
-        const audioUrl = type === 'normal' ? `/normal.mp3?t=${timestamp}` : `/danger.mp3?t=${timestamp}`;
+        const nameMap = {
+            normal: 'normal.mp3',
+            danger: 'danger.mp3',
+            left: 'left.mp3',
+            right: 'right.mp3',
+            rear: 'rear.mp3'
+        };
+        const labelMap = {
+            normal: '普通',
+            danger: '危险',
+            left: '左后方',
+            right: '右后方',
+            rear: '正后方'
+        };
+        const fileName = nameMap[type] || 'normal.mp3';
+        const audioUrl = `/${fileName}?t=${timestamp}`;
         const audio = new Audio(audioUrl);
         audio.play().then(() => {
-            showMessage(`🔊 正在播放${type === 'normal' ? '普通' : '危险'}音效`, 'success')
+            const label = labelMap[type] || '普通';
+            showMessage(`🔊 正在播放${label}音效`, 'success')
         }).catch(error => {
-            showMessage(`❌ 播放${type === 'normal' ? '普通' : '危险'}音效失败`, 'error')
+            const label = labelMap[type] || '普通';
+            showMessage(`❌ 播放${label}音效失败`, 'error')
         })
     }
 
@@ -662,7 +724,8 @@
         progressEl.innerText = '开始上传固件...';
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
-            xhr.open('POST', '/update', true);
+            const type = document.getElementById('firmwareTypeFiles').checked ? 'fs' : 'flash';
+            xhr.open('POST', `/update?firmwareType=${encodeURIComponent(type)}`, true);
             xhr.setRequestHeader('Content-Type', 'application/octet-stream');
             xhr.upload.onprogress = (e) => {
                 if (e.lengthComputable) {
@@ -672,7 +735,8 @@
             };
             xhr.onload = () => {
                 if (xhr.status === 200) {
-                    progressEl.innerText = '更新成功，设备将重启...正在等待设备恢复';
+                    const msgType = type === 'fs' ? '文件系统' : '程序固件';
+                    progressEl.innerText = `更新${msgType}成功，设备将重启...正在等待设备恢复`;
                     resolve();
                 } else {
                     progressEl.innerText = `更新失败：${xhr.responseText || xhr.status}`;
@@ -716,7 +780,7 @@
                     const __pad2 = n => String(n).padStart(2, '0');
                     const __fmt2 = isNaN(__d2.getTime()) ? data.buildTime : `${__d2.getFullYear()}-${__pad2(__d2.getMonth() + 1)}-${__pad2(__d2.getDate())} ${__pad2(__d2.getHours())}:${__pad2(__d2.getMinutes())}:${__pad2(__d2.getSeconds())}`;
                     document.getElementById('firmwareVersion').innerHTML = `<div><span style="font-weight:600;color:#2d3748">当前固件版本：</span><span style="color:#4a5568">${data.version}</span></div><div><span style="font-weight:600;color:#2d3748">构建时间：</span><span style="color:#718096">${__fmt2}</span></div>`;
-                    progressEl.innerText = '设备已重启并恢复连接';
+                    progressEl.innerText = '设备已重启，请重新连接设备WiFi热点';
                     return true;
                 }
             } catch (e) {
@@ -724,7 +788,7 @@
             }
             await new Promise(r => setTimeout(r, intervalMs));
         }
-        progressEl.innerText = '等待设备恢复超时，请手动刷新页面或稍后重试';
+        progressEl.innerText = '等待设备恢复超时，请手动连刷新页面';
         return false;
     }
 

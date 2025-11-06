@@ -137,17 +137,30 @@ void WebServerManager::begin() {
 
     server.on("/update", HTTP_POST,
               [this](AsyncWebServerRequest *request) {
-                  request->send(400, "text/plain; charset=utf-8", "请以二进制上传固件文件");
+                  request->send(400, "text/plain; charset=utf-8", "请以二进制上传固件或文件系统镜像");
               },
               NULL,
               [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
                   static bool updateBegun = false;
                   static bool updateError = false;
+                  static uint8_t updateTarget = U_FLASH; // 默认更新程序固件
 
                   if (index == 0) {
-                      // Serial.printf("开始接收固件，总大小: %u 字节\n", (unsigned) total);
+                      // Serial.printf("开始接收更新包，总大小: %u 字节\n", (unsigned) total);
                       Update.runAsync(true);
-                      updateBegun = Update.begin(total);
+                      // 根据请求参数选择更新目标：程序(U_FLASH) 或 文件系统(U_FS)
+                      String type = "flash";
+                      if (request->hasParam("firmwareType")) {
+                          type = request->getParam("firmwareType")->value();
+                      }
+                      type.toLowerCase();
+                      if (type == "fs" ) {
+                          updateTarget = U_FS;
+                      } else {
+                          updateTarget = U_FLASH;
+                      }
+
+                      updateBegun = Update.begin(total, updateTarget);
                       updateError = !updateBegun;
                       if (!updateBegun) {
                           // Serial.println("Update.begin 失败");
@@ -164,7 +177,7 @@ void WebServerManager::begin() {
 
                   if (index + len == total) {
                       if (!updateError && Update.end(true)) {
-                          // Serial.println("固件更新成功，即将重启...");
+                          // Serial.println("更新成功，即将重启...");
                           AsyncWebServerResponse *resp = request->beginResponse(
                               200, "text/plain; charset=utf-8", "更新成功，设备将重启");
                           resp->addHeader("Connection", "close");
@@ -173,9 +186,9 @@ void WebServerManager::begin() {
                           rebootAtMillis = millis() + 500;
                           shouldRestart = true;
                       } else {
-                          // Serial.printf("固件更新失败，错误码: %d\n", (int) Update.getError());
+                          // Serial.printf("更新失败，错误码: %d\n", (int) Update.getError());
                           Update.end(false);
-                          request->send(500, "text/plain; charset=utf-8", "更新失败");
+                          request->send(500, "text/plain; charset=utf-8", "更新失败，错误码:"+ Update.getError());
                       }
                   }
               });
