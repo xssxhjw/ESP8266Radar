@@ -341,6 +341,15 @@
     button {
         margin: 5px 0
     }
+
+    /* 移动端：测试按钮取消固定宽度，避免高度异常 */
+    .button-group button:not(.ota-btn) {
+        flex: 1 1 auto;
+        white-space: normal;
+        word-break: keep-all;
+        padding: 10px 16px;
+        line-height: 1.2;
+    }
 }
     .radio-group { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
     .radio-option { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 12px; border-radius: 6px; transition: background-color .2s; margin-bottom: 0; }
@@ -490,7 +499,7 @@
     </div>
         <div class="section">
             <h2>🧪 功能测试</h2>
-            <div class="form-group" style="margin-top:4px;">
+            <div class="form-group">
                 <div class="button-group">
                     <button type="button" onclick="triggerTest('normal')">🔔 普 通 预 警</button>
                     <button type="button" onclick="triggerTest('danger')">⚠️ 危 险 预 警</button>
