@@ -63,7 +63,7 @@ void WebServerManager::begin() {
     });
 
     // 功能测试路由：左后方、右后方、正后方来车
-    server.on("/testWarning", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    server.on("/testWarning", HTTP_POST, [this](AsyncWebServerRequest *request) {
         if (radar) {
             String warningType = "normal";
             if (request->hasParam("warningType")) {

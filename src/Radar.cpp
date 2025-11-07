@@ -110,7 +110,10 @@ void Radar::testWarning(bool left, bool right, bool isDanger) {
             audio = "/right.mp3"; // 右后方来车
         } else if (!left && !right) {
             audio = isDanger ? "/danger.mp3" : "/normal.mp3";
+            left = true;
+            right = true;
         }
+        triggerLightWarning(left, right, true);
         playAudio(audio);
     } else {
         triggerLightWarning(left, right, true);
