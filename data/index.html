@@ -197,7 +197,7 @@
         flex-wrap: wrap;
     }
 
-    .button-group button {
+    .button-group button:not(.ota-btn) {
         flex: 0 1 140px; /* 以内容为主，基础宽度140px，可自动换行到下一行 */
         white-space: nowrap; /* 避免中文逐字换行导致垂直显示 */
         word-break: keep-all; /* 保持中文词组不被随意断开 */
@@ -494,9 +494,9 @@
                 <div class="button-group">
                     <button type="button" onclick="triggerTest('normal')">🔔 普 通 预 警</button>
                     <button type="button" onclick="triggerTest('danger')">⚠️ 危 险 预 警</button>
-                    <button type="button" onclick="triggerTest('left')">⬅️ 左后方来车</button>
-                    <button type="button" onclick="triggerTest('rear')">⬆️ 正后方来车</button>
-                    <button type="button" onclick="triggerTest('right')">➡️ 右后方来车</button>
+                    <button type="button" onclick="triggerTest('left')">⬅️ 左后方预警</button>
+                    <button type="button" onclick="triggerTest('rear')">⬆️ 正后方预警</button>
+                    <button type="button" onclick="triggerTest('right')">➡️ 右后方预警</button>
                 </div>
             </div>
         </div>
