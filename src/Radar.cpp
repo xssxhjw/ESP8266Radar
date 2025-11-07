@@ -26,7 +26,7 @@ void Radar::begin() {
     delay(200);
     pinMode(LEFT_LIGHT_PIN, OUTPUT);
     digitalWrite(LEFT_LIGHT_PIN, LOW);
-    leftLightPinState = false;  // 初始化左灯状态变量
+    leftLightPinState = false; // 初始化左灯状态变量
     pinMode(RIGHT_LIGHT_PIN, OUTPUT);
     digitalWrite(RIGHT_LIGHT_PIN, LOW);
     rightLightPinState = false; // 初始化右灯状态变量
@@ -44,7 +44,7 @@ void Radar::triggerLightWarning(bool left, bool right, bool isDanger) {
         leftLightOn = true;
         leftLightOnTime = now;
         leftLightLastBlinkTime = now;
-        leftLightPinState = true;  // 更新状态变量
+        leftLightPinState = true; // 更新状态变量
         digitalWrite(LEFT_LIGHT_PIN, HIGH);
     }
     if (right) {
@@ -56,6 +56,13 @@ void Radar::triggerLightWarning(bool left, bool right, bool isDanger) {
     }
 }
 
+void Radar::playAudio(String audio) {
+    file = new AudioFileSourceLittleFS(audio.c_str());
+    out->SetGain(configMgr->getConfig().warningGain);
+    mp3->begin(file, out);
+}
+
+
 void Radar::triggerAudioWarning(bool left, bool right, bool isDanger) {
     if (mp3 == nullptr) {
         mp3 = new AudioGeneratorMP3();
@@ -64,63 +71,52 @@ void Radar::triggerAudioWarning(bool left, bool right, bool isDanger) {
         return;
     }
     triggerLightWarning(left, right, isDanger);
-    String audio = isDanger ? "/danger.mp3" : "/normal.mp3";
-    file = new AudioFileSourceLittleFS(audio.c_str());
-    out->SetGain(configMgr->getConfig().warningGain);
-    mp3->begin(file, out);
+    const auto &cfg = configMgr->getConfig();
+    String audio;
+    if (isDanger) {
+        audio = "/danger.mp3";
+    } else {
+        if (cfg.lightAngle) {
+            if (left && right) {
+                audio = "/rear.mp3"; // 正后方来车
+            } else if (left) {
+                audio = "/left.mp3"; // 左后方来车
+            } else if (right) {
+                audio = "/right.mp3"; // 右后方来车
+            }
+        } else {
+            audio = "/normal.mp3";
+        }
+    }
+    playAudio(audio);
 }
 
-void Radar::testWarning(bool left, bool right) {
+void Radar::testWarning(bool left, bool right, bool isDanger) {
     const auto &cfg = configMgr->getConfig();
-    // 灯光逻辑与正常预警一致
-    triggerLightWarning(left, right, true);
-
-    // 功能测试时，若开启音效，则按方向播放特定音频文件
     if (cfg.audioEnabled) {
         if (mp3 == nullptr) {
             mp3 = new AudioGeneratorMP3();
         }
-        // 若已有音频在播放，直接忽略本次测试触发，避免打断当前播放
         if (mp3->isRunning()) {
             return;
         }
-
+        triggerLightWarning(left, right, true);
         String audio;
         if (left && right) {
-            audio = "/rear.mp3";   // 正后方来车
+            audio = "/rear.mp3"; // 正后方来车
         } else if (left) {
-            audio = "/left.mp3";   // 左后方来车
+            audio = "/left.mp3"; // 左后方来车
         } else if (right) {
-            audio = "/right.mp3";  // 右后方来车
-        } else {
-            audio = "/normal.mp3"; // 兜底
+            audio = "/right.mp3"; // 右后方来车
+        } else if (!left && !right) {
+            audio = isDanger ? "/danger.mp3" : "/normal.mp3";
         }
-        file = new AudioFileSourceLittleFS(audio.c_str());
-        out->SetGain(cfg.warningGain);
-        mp3->begin(file, out);
+        playAudio(audio);
+    } else {
+        triggerLightWarning(left, right, true);
     }
 }
 
-void Radar::testGenericWarning(bool isDanger) {
-    const auto &cfg = configMgr->getConfig();
-    // 左右同时预警，方向不区分
-    triggerLightWarning(true, true, isDanger);
-
-    // 若开启音效，播放普通/危险音效
-    if (cfg.audioEnabled) {
-        if (mp3 == nullptr) {
-            mp3 = new AudioGeneratorMP3();
-        }
-        // 若已有音频在播放，忽略本次触发
-        if (mp3->isRunning()) {
-            return;
-        }
-        String audio = isDanger ? "/danger.mp3" : "/normal.mp3";
-        file = new AudioFileSourceLittleFS(audio.c_str());
-        out->SetGain(cfg.warningGain);
-        mp3->begin(file, out);
-    }
-}
 
 void Radar::processTargets(uint8_t targetCount, uint8_t *data) {
     const auto &cfg = configMgr->getConfig();
@@ -133,15 +129,17 @@ void Radar::processTargets(uint8_t targetCount, uint8_t *data) {
             data[i * 5 + 2] == 0x01,
             data[i * 5 + 1],
             data[i * 5 + 3],
-            (int8_t)(data[i * 5] - 0x80),
+            (int8_t) (data[i * 5] - 0x80),
             now
         };
         //忽略不符目标
-        if (!target.approaching || target.distance <= 0 || target.distance > cfg.detectionDistance || target.speed <= 0 || target.speed < cfg.detectionSpeed || target.speed > 120 || target.angle <= -12 || target.angle >= 12) {
+        if (!target.approaching || target.distance <= 0 || target.distance > cfg.detectionDistance || target.speed <= 0
+            || target.speed < cfg.detectionSpeed || target.speed > 120 || target.angle <= -12 || target.angle >= 12) {
             continue;
         }
         // 与前一个目标比较，如果完全一致则忽略
-        if (hasPreTarget &&  target.distance == preTarget.distance && target.speed == preTarget.speed && target.angle == preTarget.angle) {
+        if (hasPreTarget && target.distance == preTarget.distance && target.speed == preTarget.speed && target.angle ==
+            preTarget.angle) {
             continue;
         }
         // 与上一次全局探测比较：若时间间隔<1秒则忽略
@@ -227,7 +225,7 @@ void Radar::updateLightBehavior() {
         // 达到持续时长后，结束预警并熄灭
         if (now - leftLightOnTime >= durationMs) {
             leftLightOn = false;
-            leftLightPinState = false;  // 同步更新状态变量
+            leftLightPinState = false; // 同步更新状态变量
             digitalWrite(LEFT_LIGHT_PIN, LOW);
         }
         if (now - rightLightOnTime >= durationMs) {
@@ -242,7 +240,7 @@ void Radar::updateLightBehavior() {
     // 闪烁模式的周期切换
     if (cfg.lightBlink) {
         if (leftLightOn && (now - leftLightLastBlinkTime >= blinkInterval)) {
-            leftLightPinState = !leftLightPinState;  // 使用状态变量翻转
+            leftLightPinState = !leftLightPinState; // 使用状态变量翻转
             digitalWrite(LEFT_LIGHT_PIN, leftLightPinState ? HIGH : LOW);
             leftLightLastBlinkTime = now;
         }
@@ -265,8 +263,8 @@ void Radar::warning() {
             file = nullptr;
             leftLightOn = false;
             rightLightOn = false;
-            leftLightPinState = false;   // 同步更新状态变量
-            rightLightPinState = false;  // 同步更新状态变量
+            leftLightPinState = false; // 同步更新状态变量
+            rightLightPinState = false; // 同步更新状态变量
             digitalWrite(LEFT_LIGHT_PIN, LOW);
             digitalWrite(RIGHT_LIGHT_PIN, LOW);
         }

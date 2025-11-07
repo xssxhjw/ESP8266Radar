@@ -50,12 +50,12 @@ void WebServerManager::begin() {
     server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
 
     server.on("/version", HTTP_GET, [](AsyncWebServerRequest *request) {
-       String json = String("{") +
-                     "\"version\":\"" + String(FIRMWARE_VERSION) + "\"," +
-                     "\"buildTime\":\"" + String(BUILD_TIME) + "\"" +
-                     "}";
-       request->send(200, "application/json; charset=utf-8", json);
-   });
+        String json = String("{") +
+                      "\"version\":\"" + String(FIRMWARE_VERSION) + "\"," +
+                      "\"buildTime\":\"" + String(BUILD_TIME) + "\"" +
+                      "}";
+        request->send(200, "application/json; charset=utf-8", json);
+    });
 
     server.on("/config", HTTP_GET, [this](AsyncWebServerRequest *request) {
         String config = configManager->getConfigJson();
@@ -63,43 +63,24 @@ void WebServerManager::begin() {
     });
 
     // 功能测试路由：左后方、右后方、正后方来车
-    server.on("/test/left", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    server.on("/testWarning", HTTP_GET, [this](AsyncWebServerRequest *request) {
         if (radar) {
-            radar->testWarning(true, false);
-            request->send(200, "text/plain; charset=utf-8", "已触发左后方来车预警");
-        } else {
-            request->send(500, "text/plain; charset=utf-8", "Radar 未初始化");
-        }
-    });
-    server.on("/test/right", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        if (radar) {
-            radar->testWarning(false, true);
-            request->send(200, "text/plain; charset=utf-8", "已触发右后方来车预警");
-        } else {
-            request->send(500, "text/plain; charset=utf-8", "Radar 未初始化");
-        }
-    });
-    server.on("/test/rear", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        if (radar) {
-            radar->testWarning(true, true);
-            request->send(200, "text/plain; charset=utf-8", "已触发正后方来车预警");
-        } else {
-            request->send(500, "text/plain; charset=utf-8", "Radar 未初始化");
-        }
-    });
-    // 新增：普通/危险预警测试（不区分方向）
-    server.on("/test/normal", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        if (radar) {
-            radar->testGenericWarning(false);
-            request->send(200, "text/plain; charset=utf-8", "已触发普通预警");
-        } else {
-            request->send(500, "text/plain; charset=utf-8", "Radar 未初始化");
-        }
-    });
-    server.on("/test/danger", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        if (radar) {
-            radar->testGenericWarning(true);
-            request->send(200, "text/plain; charset=utf-8", "已触发危险预警");
+            String warningType = "normal";
+            if (request->hasParam("warningType")) {
+                warningType = request->getParam("warningType")->value();
+            }
+            if (warningType == "normal") {
+                radar->testWarning(false, false, false);
+            } else if (warningType == "danger") {
+                radar->testWarning(false, false, true);
+            } else if (warningType == "left") {
+                radar->testWarning(true, false, false);
+            } else if (warningType == "rear") {
+                radar->testWarning(true, true, false);
+            } else if (warningType == "right") {
+                radar->testWarning(false, true, false);
+            }
+            request->send(200, "text/plain; charset=utf-8", "已触发预警");
         } else {
             request->send(500, "text/plain; charset=utf-8", "Radar 未初始化");
         }
@@ -123,14 +104,17 @@ void WebServerManager::begin() {
                       DeserializationError err = deserializeJson(doc, body);
                       if (!err) {
                           const auto &oldCfg = configManager->getConfig();
-                          bool newAudioEnabled = doc["audioEnabled"].isNull() ? oldCfg.audioEnabled : (bool)doc["audioEnabled"];
-                          bool newAudioI2S = doc["audioI2S"].isNull() ? oldCfg.audioI2S : (bool)doc["audioI2S"];
+                          bool newAudioEnabled = doc["audioEnabled"].isNull()
+                                                     ? oldCfg.audioEnabled
+                                                     : (bool) doc["audioEnabled"];
+                          bool newAudioI2S = doc["audioI2S"].isNull() ? oldCfg.audioI2S : (bool) doc["audioI2S"];
                           needReboot = (newAudioEnabled != oldCfg.audioEnabled) || (newAudioI2S != oldCfg.audioI2S);
                       }
 
                       if (configManager->updateConfig(body)) {
                           if (needReboot) {
-                              AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain; charset=utf-8", "配置保存成功，设备将重启");
+                              AsyncWebServerResponse *resp = request->beginResponse(
+                                  200, "text/plain; charset=utf-8", "配置保存成功，设备将重启");
                               resp->addHeader("Connection", "close");
                               request->send(resp);
                               rebootAtMillis = millis() + 500;
@@ -171,7 +155,7 @@ void WebServerManager::begin() {
                           type = request->getParam("firmwareType")->value();
                       }
                       type.toLowerCase();
-                      if (type == "fs" ) {
+                      if (type == "fs") {
                           updateTarget = U_FS;
                       } else {
                           updateTarget = U_FLASH;
@@ -205,7 +189,7 @@ void WebServerManager::begin() {
                       } else {
                           // Serial.printf("更新失败，错误码: %d\n", (int) Update.getError());
                           Update.end(false);
-                          request->send(500, "text/plain; charset=utf-8", "更新失败，错误码:"+ Update.getError());
+                          request->send(500, "text/plain; charset=utf-8", "更新失败，错误码:" + Update.getError());
                       }
                   }
               });

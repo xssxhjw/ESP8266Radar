@@ -703,7 +703,7 @@
 
     async function triggerTest(type) {
         try {
-            const res = await fetch(`/test/${type}`, {method: 'GET', cache: 'no-store'});
+            const res = await fetch(`/testWarning?warningType=${type}`, {method: 'POST', });
             if (!res.ok) throw new Error('请求失败');
             const text = await res.text();
             showMessage(`✅ ${text}`, 'success');

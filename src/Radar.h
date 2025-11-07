@@ -62,10 +62,9 @@ public:
 
     void warning();
 
-    void testWarning(bool left, bool right);
+    void testWarning(bool left, bool right,bool isDanger);
 
-    // 新增：普通/危险预警的通用测试触发（方向不区分，左右同时）
-    void testGenericWarning(bool isDanger);
+    void playAudio(String audio);
 };
 
 #endif // RADAR_PLAYER_H
