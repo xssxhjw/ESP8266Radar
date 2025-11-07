@@ -87,6 +87,23 @@ void WebServerManager::begin() {
             request->send(500, "text/plain; charset=utf-8", "Radar 未初始化");
         }
     });
+    // 新增：普通/危险预警测试（不区分方向）
+    server.on("/test/normal", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        if (radar) {
+            radar->testGenericWarning(false);
+            request->send(200, "text/plain; charset=utf-8", "已触发普通预警");
+        } else {
+            request->send(500, "text/plain; charset=utf-8", "Radar 未初始化");
+        }
+    });
+    server.on("/test/danger", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        if (radar) {
+            radar->testGenericWarning(true);
+            request->send(200, "text/plain; charset=utf-8", "已触发危险预警");
+        } else {
+            request->send(500, "text/plain; charset=utf-8", "Radar 未初始化");
+        }
+    });
 
     server.on("/config", HTTP_POST, [this](AsyncWebServerRequest *request) {
                   request->send(400, "text/plain; charset=utf-8", "请使用正确的请求格式");

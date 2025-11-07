@@ -101,6 +101,27 @@ void Radar::testWarning(bool left, bool right) {
     }
 }
 
+void Radar::testGenericWarning(bool isDanger) {
+    const auto &cfg = configMgr->getConfig();
+    // 左右同时预警，方向不区分
+    triggerLightWarning(true, true, isDanger);
+
+    // 若开启音效，播放普通/危险音效
+    if (cfg.audioEnabled) {
+        if (mp3 == nullptr) {
+            mp3 = new AudioGeneratorMP3();
+        }
+        // 若已有音频在播放，忽略本次触发
+        if (mp3->isRunning()) {
+            return;
+        }
+        String audio = isDanger ? "/danger.mp3" : "/normal.mp3";
+        file = new AudioFileSourceLittleFS(audio.c_str());
+        out->SetGain(cfg.warningGain);
+        mp3->begin(file, out);
+    }
+}
+
 void Radar::processTargets(uint8_t targetCount, uint8_t *data) {
     const auto &cfg = configMgr->getConfig();
     bool hasPreTarget = false;
