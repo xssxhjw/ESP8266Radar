@@ -153,6 +153,10 @@ void WebServerManager::begin() {
                       String type = "flash";
                       if (request->hasParam("firmwareType")) {
                           type = request->getParam("firmwareType")->value();
+                      }else {
+                          if (total > 500000) {
+                              type = "fs";
+                          }
                       }
                       type.toLowerCase();
                       if (type == "fs") {

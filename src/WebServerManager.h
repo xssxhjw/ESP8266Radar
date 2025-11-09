@@ -1,7 +1,6 @@
-#ifndef WEBSERVER_H
-#define WEBSERVER_H
+#ifndef WEBSERVER_MANAGER_H
+#define WEBSERVER_MANAGER_H
 
-#include <ESP8266WebServer.h>
 #include <ESPAsyncWebServer.h>
 #include "ConfigManager.h"
 class Radar; // 前向声明

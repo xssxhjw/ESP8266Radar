@@ -72,23 +72,23 @@ void Radar::triggerAudioWarning(bool left, bool right, bool isDanger) {
     }
     triggerLightWarning(left, right, isDanger);
     const auto &cfg = configMgr->getConfig();
-    String audio;
+    String path;
     if (isDanger) {
-        audio = "/danger.mp3";
+        path = "/danger.mp3";
     } else {
         if (cfg.lightAngle) {
             if (left && right) {
-                audio = "/rear.mp3"; // 正后方来车
+                path = "/rear.mp3"; // 正后方来车
             } else if (left) {
-                audio = "/left.mp3"; // 左后方来车
+                path = "/left.mp3"; // 左后方来车
             } else if (right) {
-                audio = "/right.mp3"; // 右后方来车
+                path = "/right.mp3"; // 右后方来车
             }
         } else {
-            audio = "/normal.mp3";
+            path = "/normal.mp3";
         }
     }
-    playAudio(audio);
+    playAudio(path);
 }
 
 void Radar::testWarning(bool left, bool right, bool isDanger) {
@@ -100,21 +100,20 @@ void Radar::testWarning(bool left, bool right, bool isDanger) {
         if (mp3->isRunning()) {
             return;
         }
-        triggerLightWarning(left, right, true);
-        String audio;
+        String path;
         if (left && right) {
-            audio = "/rear.mp3"; // 正后方来车
+            path = "/rear.mp3"; // 正后方来车
         } else if (left) {
-            audio = "/left.mp3"; // 左后方来车
+            path = "/left.mp3"; // 左后方来车
         } else if (right) {
-            audio = "/right.mp3"; // 右后方来车
+            path = "/right.mp3"; // 右后方来车
         } else if (!left && !right) {
-            audio = isDanger ? "/danger.mp3" : "/normal.mp3";
+            path = isDanger ? "/danger.mp3" : "/normal.mp3";
             left = true;
             right = true;
         }
         triggerLightWarning(left, right, true);
-        playAudio(audio);
+        playAudio(path);
     } else {
         triggerLightWarning(left, right, true);
     }
@@ -127,7 +126,6 @@ void Radar::processTargets(uint8_t targetCount, uint8_t *data) {
     RadarTarget preTarget;
     const unsigned long now = millis();
     for (int i = 0; i < targetCount; i++) {
-        // 使用 RadarTarget 结构体封装本次目标
         RadarTarget target = {
             data[i * 5 + 2] == 0x01,
             data[i * 5 + 1],
