@@ -392,6 +392,17 @@
         </div>
         <div id="audioSettingsContainer">
             <div class="form-group">
+                <label>启动音效:</label>
+                <div class="radio-group">
+                    <label class="radio-option">
+                        <input type="radio" name="startAudio" id="startAudioTrue" value="true" checked> 启用
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="startAudio" id="startAudioFalse" value="false"> 禁用
+                    </label>
+                </div>
+            </div>
+            <div class="form-group">
                 <label for="warningGain">音效音量: <span id="warningGainValue">2.5</span></label>
                 <input type="range" id="warningGain" min="0" max="3.5" step="0.1" value="2.5" oninput="updateRangeValue('warningGain','warningGainValue','')">
             </div>
@@ -586,6 +597,7 @@
             warningGain: parseFloat(document.getElementById('warningGain').value),
             audioEnabled: document.getElementById('audioEnabledTrue').checked,
             audioI2S: document.getElementById('audioI2STrue').checked,
+            startAudio: document.getElementById('startAudioTrue').checked,
             lightAngle: document.getElementById('lightAngleDirectional').checked,
             centerAngle: parseInt(document.getElementById('centerAngle').value)
         };
@@ -624,6 +636,9 @@
             const audioI2S = (config.audioI2S !== undefined ? config.audioI2S : true);
             document.getElementById('audioI2STrue').checked = !!audioI2S;
             document.getElementById('audioI2SFalse').checked = !audioI2S;
+            const startAudio = (config.startAudio !== undefined ? config.startAudio : true);
+            document.getElementById('startAudioTrue').checked = !!startAudio;
+            document.getElementById('startAudioFalse').checked = !startAudio;
             const lightAngleDirectional = (config.lightAngle !== undefined ? config.lightAngle : true);
             document.getElementById('lightAngleDirectional').checked = !!lightAngleDirectional;
             document.getElementById('lightAngleBoth').checked = !lightAngleDirectional;

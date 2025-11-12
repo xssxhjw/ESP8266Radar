@@ -31,7 +31,10 @@ void Radar::begin() {
     digitalWrite(RIGHT_LIGHT_PIN, LOW);
     rightLightPinState = false; // 初始化右灯状态变量
     delay(50);
-    // Serial.println("雷达系统初始化完成");
+    // 根据配置决定是否播放启动音效
+    if (cfg.audioEnabled && cfg.startAudio) {
+        playAudio("/start.mp3");
+    }
 }
 
 void Radar::triggerLightWarning(bool left, bool right, bool isDanger) {
@@ -57,8 +60,15 @@ void Radar::triggerLightWarning(bool left, bool right, bool isDanger) {
 }
 
 void Radar::playAudio(String audio) {
+    const auto &cfg = configMgr->getConfig();
+    if (!cfg.audioEnabled) {
+        return;
+    }
+    if (mp3 == nullptr) {
+        mp3 = new AudioGeneratorMP3();
+    }
     file = new AudioFileSourceLittleFS(audio.c_str());
-    out->SetGain(configMgr->getConfig().warningGain);
+    out->SetGain(cfg.warningGain);
     mp3->begin(file, out);
 }
 
@@ -139,12 +149,13 @@ void Radar::processTargets(uint8_t targetCount, uint8_t *data) {
             continue;
         }
         // 与前一个目标比较，如果完全一致则忽略
-        if (hasPreTarget && target.distance == preTarget.distance && target.speed == preTarget.speed && target.angle ==
-            preTarget.angle) {
+        if (targetCount > 1 && hasPreTarget && target.distance == preTarget.distance && target.speed == preTarget.speed
+            && target.angle == preTarget.angle) {
             continue;
         }
         // 与上一次全局探测比较：若时间间隔<1秒则忽略
-        if (hasLastTarget && (now - lastTarget.timestamp) < 1000UL) {
+        if (hasLastTarget && ((lastTarget.distance == target.distance && lastTarget.speed == target.speed && lastTarget.
+                               angle == target.angle) || (now - lastTarget.timestamp) < 1500UL)) {
             continue;
         }
         hasPreTarget = true;

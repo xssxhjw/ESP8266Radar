@@ -11,5 +11,6 @@
   "lightAngle": false,
   "centerAngle": 5,
   "audioEnabled": true,
+  "startAudio": true,
   "audioI2S": true
 }

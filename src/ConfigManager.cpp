@@ -18,6 +18,7 @@ void ConfigManager::setDefaultConfig() {
     config.blinkDuration = 2;
     config.audioEnabled = true;
     config.audioI2S = true;
+    config.startAudio = true;
 }
 
 bool ConfigManager::loadConfig() {
@@ -49,6 +50,7 @@ bool ConfigManager::loadConfig() {
     config.blinkDuration = doc["blinkDuration"] | config.blinkDuration;
     config.audioEnabled = doc["audioEnabled"] | config.audioEnabled;
     config.audioI2S = doc["audioI2S"] | config.audioI2S;
+    config.startAudio = doc["startAudio"] | config.startAudio;
     return true;
 }
 
@@ -70,6 +72,7 @@ bool ConfigManager::saveConfig() {
     doc["blinkDuration"] = config.blinkDuration;
     doc["audioEnabled"] = config.audioEnabled;
     doc["audioI2S"] = config.audioI2S;
+    doc["startAudio"] = config.startAudio;
     File file = LittleFS.open(configFilePath, "w");
     if (!file) {
         return false;
@@ -95,6 +98,7 @@ bool ConfigManager::updateConfig(const String &jsonString) {
     config.audioI2S = doc["audioI2S"] | config.audioI2S;
     config.lightAngle = doc["lightAngle"] | config.lightAngle;
     config.centerAngle = doc["centerAngle"] | config.centerAngle;
+    config.startAudio = doc["startAudio"] | config.startAudio;
     return saveConfig();
 }
 
@@ -117,6 +121,7 @@ String ConfigManager::getConfigJson() const {
     doc["blinkDuration"] = config.blinkDuration;
     doc["audioEnabled"] = config.audioEnabled;
     doc["audioI2S"] = config.audioI2S;
+    doc["startAudio"] = config.startAudio;
     String result;
     serializeJson(doc, result);
     return result;

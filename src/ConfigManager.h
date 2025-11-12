@@ -16,6 +16,7 @@ struct RadarConfig {
     int centerAngle;
     bool audioEnabled;
     bool audioI2S;
+    bool startAudio;    // 是否播放启动音效
 };
 
 class ConfigManager {
