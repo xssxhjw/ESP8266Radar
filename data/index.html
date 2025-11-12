@@ -356,6 +356,9 @@
     .radio-option:hover { background-color: rgba(0,0,0,.05); }
     .conditional-group { transition: opacity .3s, max-height .3s; overflow: hidden; }
     .conditional-group.hidden { opacity: 0; max-height: 0; margin: 0; padding: 0; }
+    /* 日志模块按钮样式：与日志内容同宽，每行一个按钮 */
+    #logSection #logActions .button-group { display: block; gap: 0; margin-top: 12px; }
+    #logSection #logActions .button-group button { display: block; width: 100%; margin: 8px 0; }
     </style>
 </head>
 <body>
@@ -416,6 +419,15 @@
                         <input type="radio" name="audioI2S" id="audioI2SFalse" value="false"> 喇叭
                     </label>
                 </div>
+            </div>
+            <div class="form-group">
+                <label>启动音效:</label>
+                <input type="file" id="startAudioFile" accept=".mp3" class="hidden" onchange="uploadAudioFile('start')">
+                <div class="audio-controls">
+                    <button type="button" class="upload-btn" onclick="document.getElementById('startAudioFile').click()">📁上传音效</button>
+                    <button type="button" class="upload-btn" onclick="playAudio('start')">🔊 试听</button>
+                </div>
+                <div id="startAudioStatus"></div>
             </div>
             <div class="form-group">
                 <label>普通音效:</label>
@@ -508,18 +520,47 @@
             <input type="range" id="centerAngle" min="0" max="5" value="5" step="1" oninput="updateRangeValue('centerAngle','centerAngleValue','°')">
         </div>
     </div>
-        <div class="section">
-            <h2>🧪 功能测试</h2>
-            <div class="form-group">
-                <div class="button-group">
-                    <button type="button" onclick="triggerTest('normal')">🔔 普 通 预 警</button>
-                    <button type="button" onclick="triggerTest('danger')">⚠️ 危 险 预 警</button>
-                    <button type="button" onclick="triggerTest('left')">⬅️ 左后方预警</button>
-                    <button type="button" onclick="triggerTest('rear')">⬆️ 正后方预警</button>
-                    <button type="button" onclick="triggerTest('right')">➡️ 右后方预警</button>
-                </div>
+    <div class="section">
+        <h2>🧪 功能测试</h2>
+        <div class="form-group">
+            <div class="button-group">
+                 <button type="button" onclick="triggerTest('start')">🔊 启 动 音 效</button>
+                <button type="button" onclick="triggerTest('normal')">🔔 普 通 预 警</button>
+                <button type="button" onclick="triggerTest('danger')">⚠️ 危 险 预 警</button>
+                <button type="button" onclick="triggerTest('left')">⬅️ 左后方预警</button>
+                <button type="button" onclick="triggerTest('rear')">⬆️ 正后方预警</button>
+                <button type="button" onclick="triggerTest('right')">➡️ 右后方预警</button>
+                <button type="button" onclick="triggerTest('right')">➡️ 右后方预警</button>
+                <button type="button" onclick="triggerTest('reboot')">🔄 系 统 重 启</button>
             </div>
         </div>
+    </div>
+    <!-- 日志功能模块 -->
+    <div class="section" id="logSection">
+        <h2>📝 日志功能</h2>
+        <div class="form-group">
+            <label>日志开关:</label>
+            <div class="radio-group">
+                <label class="radio-option">
+                    <input type="radio" name="logEnabled" id="logEnabledTrue" value="true" onchange="updateLogUI()"> 启用
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="logEnabled" id="logEnabledFalse" value="false" checked onchange="updateLogUI()"> 禁用
+                </label>
+            </div>
+        </div>
+        <div class="form-group" id="logContentContainer">
+            <label>日志内容:</label>
+            <pre id="logContent" style="height:200px; overflow:auto; background:#111; color:#ddd; padding:10px; border:1px solid #333">暂无日志</pre>
+        </div>
+        <div class="form-group" id="logActions">
+            <div class="button-group">
+                <button type="button" id="btnRefreshLogs" onclick="refreshLogs()">🔄 刷新日志</button>
+                <button type="button" id="btnDownloadLogs" onclick="downloadLogs()">⬇️ 下载日志</button>
+                <button type="button" id="btnClearLogs" onclick="clearLogs()">🧹 清空日志</button>
+            </div>
+        </div>
+    </div>
     <div class="section">
         <h2>📦 固件更新</h2>
         <div class="form-group">
@@ -568,7 +609,8 @@
             danger: 'danger.mp3',
             left: 'left.mp3',
             right: 'right.mp3',
-            rear: 'rear.mp3'
+            rear: 'rear.mp3',
+            start: 'start.mp3'
         };
         const fileName = nameMap[type] || 'normal.mp3';
         formData.append('file', file, fileName);
@@ -598,6 +640,7 @@
             audioEnabled: document.getElementById('audioEnabledTrue').checked,
             audioI2S: document.getElementById('audioI2STrue').checked,
             startAudio: document.getElementById('startAudioTrue').checked,
+            logEnabled: document.getElementById('logEnabledTrue').checked,
             lightAngle: document.getElementById('lightAngleDirectional').checked,
             centerAngle: parseInt(document.getElementById('centerAngle').value)
         };
@@ -639,6 +682,9 @@
             const startAudio = (config.startAudio !== undefined ? config.startAudio : true);
             document.getElementById('startAudioTrue').checked = !!startAudio;
             document.getElementById('startAudioFalse').checked = !startAudio;
+            const logEnabled = (config.logEnabled !== undefined ? config.logEnabled : false);
+            document.getElementById('logEnabledTrue').checked = !!logEnabled;
+            document.getElementById('logEnabledFalse').checked = !logEnabled;
             const lightAngleDirectional = (config.lightAngle !== undefined ? config.lightAngle : true);
             document.getElementById('lightAngleDirectional').checked = !!lightAngleDirectional;
             document.getElementById('lightAngleBoth').checked = !lightAngleDirectional;
@@ -652,6 +698,7 @@
             updateRangeValue('centerAngle','centerAngleValue','°');
             toggleBlinkSettings();
             toggleAudioSettings();
+            updateLogUI();
             toggleAngleOptions();
             showMessage('✅ 配置加载成功', 'success')
         } catch (e) {
@@ -688,6 +735,52 @@
         }
     }
 
+    function updateLogUI() {
+        const enabled = document.getElementById('logEnabledTrue').checked;
+        const actions = document.getElementById('logActions');
+        const contentWrap = document.getElementById('logContentContainer');
+        if (actions) actions.style.display = enabled ? 'block' : 'none';
+        if (contentWrap) contentWrap.style.display = enabled ? 'block' : 'none';
+        if (enabled) {
+            const content = document.getElementById('logContent');
+            if (content && !content.textContent) content.textContent = '点击“刷新日志”查看最新内容';
+        }
+    }
+
+    async function refreshLogs() {
+        try {
+            const res = await fetch('/logs');
+            if (res.ok) {
+                const text = await res.text();
+                document.getElementById('logContent').textContent = text || '暂无日志';
+            } else {
+                document.getElementById('logContent').textContent = '暂无日志或文件不存在';
+            }
+        } catch (e) {
+            console.error(e);
+            document.getElementById('logContent').textContent = '获取日志失败';
+        }
+    }
+
+    function downloadLogs() {
+        window.location.href = '/logs/download';
+    }
+
+    async function clearLogs() {
+        try {
+            const res = await fetch('/logs/clear', { method: 'POST' });
+            if (res.ok) {
+                showMessage('✅ 日志已清空', 'success');
+                document.getElementById('logContent').textContent = '暂无日志';
+            } else {
+                showMessage('❌ 清空日志失败', 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            showMessage('❌ 清空日志失败', 'error');
+        }
+    }
+
     function playAudio(type) {
         const timestamp = new Date().getTime();
         const nameMap = {
@@ -695,14 +788,16 @@
             danger: 'danger.mp3',
             left: 'left.mp3',
             right: 'right.mp3',
-            rear: 'rear.mp3'
+            rear: 'rear.mp3',
+            start:'start.mp3'
         };
         const labelMap = {
             normal: '普通',
             danger: '危险',
             left: '左后方',
             right: '右后方',
-            rear: '正后方'
+            rear: '正后方',
+            start: '启动'
         };
         const fileName = nameMap[type] || 'normal.mp3';
         const audioUrl = `/${fileName}?t=${timestamp}`;
@@ -718,7 +813,7 @@
 
     async function triggerTest(type) {
         try {
-            const res = await fetch(`/testWarning?warningType=${type}`, {method: 'POST', });
+            const res = await fetch(`/testFunction?function=${type}`, {method: 'POST', });
             if (!res.ok) throw new Error('请求失败');
             const text = await res.text();
             showMessage(`✅ ${text}`, 'success');
@@ -837,6 +932,7 @@
 
     window.addEventListener('DOMContentLoaded', () => {
         fetchAndShowVersion();
+        updateLogUI();
     });
 
     window.onload = function () {

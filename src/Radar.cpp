@@ -1,6 +1,7 @@
 #include "Radar.h"
 #include <ArduinoJson.h>
 #include <LittleFS.h>
+static const size_t RADAR_LOG_MAX_SIZE = 32768; // 32KB 最大日志大小
 
 Radar::Radar(ConfigManager *config) {
     configMgr = config;
@@ -67,6 +68,9 @@ void Radar::playAudio(String audio) {
     if (mp3 == nullptr) {
         mp3 = new AudioGeneratorMP3();
     }
+    if (mp3->isRunning()) {
+        return;
+    }
     file = new AudioFileSourceLittleFS(audio.c_str());
     out->SetGain(cfg.warningGain);
     mp3->begin(file, out);
@@ -101,34 +105,33 @@ void Radar::triggerAudioWarning(bool left, bool right, bool isDanger) {
     playAudio(path);
 }
 
-void Radar::testWarning(bool left, bool right, bool isDanger) {
-    const auto &cfg = configMgr->getConfig();
-    if (cfg.audioEnabled) {
-        if (mp3 == nullptr) {
-            mp3 = new AudioGeneratorMP3();
-        }
-        if (mp3->isRunning()) {
-            return;
-        }
-        String path;
-        if (left && right) {
-            path = "/rear.mp3"; // 正后方来车
-        } else if (left) {
-            path = "/left.mp3"; // 左后方来车
-        } else if (right) {
-            path = "/right.mp3"; // 右后方来车
-        } else if (!left && !right) {
-            path = isDanger ? "/danger.mp3" : "/normal.mp3";
-            left = true;
-            right = true;
-        }
-        triggerLightWarning(left, right, true);
+void Radar::testFunction(String function) {
+    String path;
+    if (function == "left") {
+        path = "/left.mp3";
+        triggerLightWarning(true, false, true);
         playAudio(path);
-    } else {
-        triggerLightWarning(left, right, true);
+    } else if (function == "right") {
+        path = "/right.mp3";
+        triggerLightWarning(false, true, true);
+        playAudio(path);
+    } else if (function == "rear") {
+        path = "/rear.mp3";
+        triggerLightWarning(true, true, true);
+        playAudio(path);
+    } else if (function == "isDanger") {
+        path = "/danger.mp3";
+        triggerLightWarning(true, true, true);
+        playAudio(path);
+    } else if (function == "normal") {
+        path = "/normal.mp3";
+        triggerLightWarning(true, true, false);
+        playAudio(path);
+    } else if (function == "start") {
+        path = "/start.mp3";
+        playAudio(path);
     }
 }
-
 
 void Radar::processTargets(uint8_t targetCount, uint8_t *data) {
     const auto &cfg = configMgr->getConfig();
@@ -151,11 +154,18 @@ void Radar::processTargets(uint8_t targetCount, uint8_t *data) {
         // 与前一个目标比较，如果完全一致则忽略
         if (targetCount > 1 && hasPreTarget && target.distance == preTarget.distance && target.speed == preTarget.speed
             && target.angle == preTarget.angle) {
+            if (cfg.logEnabled) {
+                writeLog(String(millis()) + " [target] 与前一目标重复，忽略: dist=" + target.distance +
+                         ", speed=" + target.speed + ", angle=" + (int) target.angle + ", ts=" + target.timestamp);
+            }
             continue;
         }
-        // 与上一次全局探测比较：若时间间隔<1秒则忽略
         if (hasLastTarget && ((lastTarget.distance == target.distance && lastTarget.speed == target.speed && lastTarget.
                                angle == target.angle) || (now - lastTarget.timestamp) < 1500UL)) {
+            if (cfg.logEnabled) {
+                writeLog(String(millis()) + " [target] 与最近目标重复或时间过近，忽略: dist=" + target.distance +
+                         ", speed=" + target.speed + ", angle=" + (int) target.angle + ", ts=" + target.timestamp);
+            }
             continue;
         }
         hasPreTarget = true;
@@ -185,7 +195,18 @@ void Radar::processTargets(uint8_t targetCount, uint8_t *data) {
         }
         if (cfg.audioEnabled) {
             triggerAudioWarning(left, right, isDanger);
+            if (cfg.logEnabled) {
+                writeLog(
+                    String(millis()) + " [warn] 触发预警: left=" + (left ? "1" : "0") + ", right=" + (right ? "1" : "0") +
+                    ", danger=" + (isDanger ? "1" : "0") + ", angle=" + (int) target.angle + ", dist=" + target.distance
+                    + ", speed=" + target.speed + ", ts=" + target.timestamp);
+            }
         } else {
+            if (cfg.logEnabled) {
+                writeLog(
+                    String(millis()) + " [light] 仅灯光预警: left=" + (left ? "1" : "0") + ", right=" + (right ? "1" : "0") +
+                    ", danger=" + (isDanger ? "1" : "0") + ", ts=" + target.timestamp);
+            }
             triggerLightWarning(left, right, isDanger);
         }
     }
@@ -255,11 +276,25 @@ void Radar::updateLightBehavior() {
             leftLightPinState = !leftLightPinState; // 使用状态变量翻转
             digitalWrite(LEFT_LIGHT_PIN, leftLightPinState ? HIGH : LOW);
             leftLightLastBlinkTime = now;
+            if (cfg.logEnabled) {
+                writeLog(String(millis()) + " [blink] 左灯切换 -> " + (leftLightPinState ? "HIGH" : "LOW") +
+                         "，目标 " + (hasLastTarget
+                                       ? (String("dist=") + lastTarget.distance + "，speed=" + lastTarget.speed +
+                                          "，angle=" + (int) lastTarget.angle + "，ts=" + lastTarget.timestamp)
+                                       : String("none")));
+            }
         }
         if (rightLightOn && (now - rightLightLastBlinkTime >= blinkInterval)) {
             rightLightPinState = !rightLightPinState; // 使用状态变量翻转
             digitalWrite(RIGHT_LIGHT_PIN, rightLightPinState ? HIGH : LOW);
             rightLightLastBlinkTime = now;
+            if (cfg.logEnabled) {
+                writeLog(String(millis()) + " [blink] 右灯切换 -> " + (rightLightPinState ? "HIGH" : "LOW") +
+                         "，目标 " + (hasLastTarget
+                                       ? (String("dist=") + lastTarget.distance + "，speed=" + lastTarget.speed +
+                                          "，angle=" + (int) lastTarget.angle + "，ts=" + lastTarget.timestamp)
+                                       : String("none")));
+            }
         }
     }
 }
@@ -275,10 +310,18 @@ void Radar::warning() {
             file = nullptr;
             leftLightOn = false;
             rightLightOn = false;
-            leftLightPinState = false; // 同步更新状态变量
-            rightLightPinState = false; // 同步更新状态变量
+            leftLightPinState = false;
+            rightLightPinState = false;
             digitalWrite(LEFT_LIGHT_PIN, LOW);
             digitalWrite(RIGHT_LIGHT_PIN, LOW);
+            if (configMgr->getConfig().logEnabled) {
+                unsigned long __now = millis();
+                writeLog(String(__now) + " [audio] 结束播放，灯光复位，目标 " +
+                         (hasLastTarget
+                              ? (String("dist=") + lastTarget.distance + "，speed=" + lastTarget.speed +
+                                 "，angle=" + (int) lastTarget.angle + "，ts=" + lastTarget.timestamp)
+                              : String("none")));
+            }
         }
     }
     // 读取雷达数据
@@ -297,4 +340,34 @@ void Radar::warning() {
         }
     }
     updateLightBehavior();
+}
+
+void Radar::writeLog(const String &line) {
+    const auto &cfg = configMgr->getConfig();
+    if (!cfg.logEnabled) return;
+    if (!LittleFS.begin()) return;
+    // 检查大小，超过上限则旋转
+    if (LittleFS.exists("/radar.log")) {
+        File rf = LittleFS.open("/radar.log", "r");
+        if (rf) {
+            size_t sz = rf.size();
+            rf.close();
+            if (sz >= RADAR_LOG_MAX_SIZE) {
+                LittleFS.remove("/radar.log");
+                File nf = LittleFS.open("/radar.log", "w");
+                if (nf) {
+                    nf.println("=== LOG ROTATED ===");
+                    nf.close();
+                }
+            }
+        }
+    }
+    File f = LittleFS.open("/radar.log", "a");
+    if (!f) {
+        f = LittleFS.open("/radar.log", "w");
+    }
+    if (f) {
+        f.println(line);
+        f.close();
+    }
 }

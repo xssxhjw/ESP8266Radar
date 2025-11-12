@@ -55,6 +55,8 @@ private:
     void triggerLightWarning(bool left, bool right, bool isDanger);
 
     void updateLightBehavior();
+
+    void writeLog(const String &line);
 public:
     Radar(ConfigManager *configMgr);
 
@@ -62,7 +64,7 @@ public:
 
     void warning();
 
-    void testWarning(bool left, bool right,bool isDanger);
+    void testFunction(String function);
 
     void playAudio(String audio);
 };

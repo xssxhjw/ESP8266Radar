@@ -12,8 +12,7 @@ WebServerManager::WebServerManager(ConfigManager *configMgr) : server(80), confi
 }
 
 
-void WebServerManager::handleFileUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data,
-                                        size_t len, bool final) {
+void WebServerManager::handleFileUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data,size_t len, bool final) {
     static File uploadFile;
     if (!index) {
         String path = "/" + filename;
@@ -35,7 +34,6 @@ void WebServerManager::handleFileUpload(AsyncWebServerRequest *request, String f
 }
 
 void initWiFi() {
-    // Serial.println("开始初始化WiFi...");
     IPAddress local_IP(192, 168, 4, 1);
     IPAddress gateway(192, 168, 4, 1);
     IPAddress subnet(255, 255, 255, 0);
@@ -46,9 +44,6 @@ void initWiFi() {
 
 void WebServerManager::begin() {
     initWiFi();
-    // Serial.println("开始初始化WebServer...");
-    server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
-
     server.on("/version", HTTP_GET, [](AsyncWebServerRequest *request) {
         String json = String("{") +
                       "\"version\":\"" + String(FIRMWARE_VERSION) + "\"," +
@@ -62,25 +57,49 @@ void WebServerManager::begin() {
         request->send(200, "application/json; charset=utf-8", config);
     });
 
-    // 功能测试路由：左后方、右后方、正后方来车
-    server.on("/testWarning", HTTP_POST, [this](AsyncWebServerRequest *request) {
+    // 日志查看与下载
+    server.on("/logs", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (LittleFS.exists("/radar.log")) {
+            request->send(LittleFS, "/radar.log", "text/plain; charset=utf-8");
+        } else {
+            request->send(404, "text/plain; charset=utf-8", "日志不存在");
+        }
+    });
+    server.on("/logs/download", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (LittleFS.exists("/radar.log")) {
+            AsyncWebServerResponse *resp = request->beginResponse(LittleFS, "/radar.log", "application/octet-stream");
+            resp->addHeader("Content-Disposition", "attachment; filename=radar.log");
+            request->send(resp);
+        } else {
+            request->send(404, "text/plain; charset=utf-8", "日志不存在");
+        }
+    });
+    server.on("/logs/clear", HTTP_POST, [](AsyncWebServerRequest *request) {
+        if (!LittleFS.begin()) {
+            request->send(500, "text/plain; charset=utf-8", "文件系统不可用");
+            return;
+        }
+        if (LittleFS.exists("/radar.log")) {
+            LittleFS.remove("/radar.log");
+            request->send(200, "text/plain; charset=utf-8", "已清空日志");
+        } else {
+            request->send(200, "text/plain; charset=utf-8", "日志不存在");
+        }
+    });
+
+    server.on("/testFunction", HTTP_POST, [this](AsyncWebServerRequest *request) {
         if (radar) {
-            String warningType = "normal";
-            if (request->hasParam("warningType")) {
-                warningType = request->getParam("warningType")->value();
+            String function = "normal";
+            if (request->hasParam("function")) {
+                function = request->getParam("function")->value();
             }
-            if (warningType == "normal") {
-                radar->testWarning(false, false, false);
-            } else if (warningType == "danger") {
-                radar->testWarning(false, false, true);
-            } else if (warningType == "left") {
-                radar->testWarning(true, false, false);
-            } else if (warningType == "rear") {
-                radar->testWarning(true, true, false);
-            } else if (warningType == "right") {
-                radar->testWarning(false, true, false);
+            if (function == "reboot") {
+                rebootAtMillis = millis() + 500;
+                shouldRestart = true;
+            } else {
+                radar->testFunction(function);
             }
-            request->send(200, "text/plain; charset=utf-8", "已触发预警");
+            request->send(200, "text/plain; charset=utf-8", "已触发功能");
         } else {
             request->send(500, "text/plain; charset=utf-8", "Radar 未初始化");
         }
@@ -88,7 +107,7 @@ void WebServerManager::begin() {
 
     server.on("/config", HTTP_POST, [this](AsyncWebServerRequest *request) {
                   request->send(400, "text/plain; charset=utf-8", "请使用正确的请求格式");
-              }, NULL, [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+              }, nullptr, [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
                   static String body = "";
                   if (index == 0) {
                       body = "";
@@ -97,24 +116,18 @@ void WebServerManager::begin() {
                       body += (char) data[i];
                   }
                   if (index + len == total) {
-                      // 数据接收完成，保存配置
                       bool needReboot = false;
-                      // 尝试解析以检测关键项是否变更
                       StaticJsonDocument<512> doc;
                       DeserializationError err = deserializeJson(doc, body);
                       if (!err) {
                           const auto &oldCfg = configManager->getConfig();
-                          bool newAudioEnabled = doc["audioEnabled"].isNull()
-                                                     ? oldCfg.audioEnabled
-                                                     : (bool) doc["audioEnabled"];
+                          bool newAudioEnabled = doc["audioEnabled"].isNull()? oldCfg.audioEnabled: (bool) doc["audioEnabled"];
                           bool newAudioI2S = doc["audioI2S"].isNull() ? oldCfg.audioI2S : (bool) doc["audioI2S"];
                           needReboot = (newAudioEnabled != oldCfg.audioEnabled) || (newAudioI2S != oldCfg.audioI2S);
                       }
-
                       if (configManager->updateConfig(body)) {
                           if (needReboot) {
-                              AsyncWebServerResponse *resp = request->beginResponse(
-                                  200, "text/plain; charset=utf-8", "配置保存成功，设备将重启");
+                              AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain; charset=utf-8", "配置保存成功，设备将重启");
                               resp->addHeader("Connection", "close");
                               request->send(resp);
                               rebootAtMillis = millis() + 500;
@@ -128,24 +141,19 @@ void WebServerManager::begin() {
                   }
               });
 
-
     server.on("/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
                   request->send(200, "text/plain; charset=utf-8", "上传完成");
-              }, [this](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len,
-                        bool final) {
+              }, [this](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len,bool final) {
                   handleFileUpload(request, filename, index, data, len, final);
               });
 
     server.on("/update", HTTP_POST,
               [this](AsyncWebServerRequest *request) {
                   request->send(400, "text/plain; charset=utf-8", "请以二进制上传固件或文件系统镜像");
-              },
-              NULL,
-              [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+              }, nullptr,[this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
                   static bool updateBegun = false;
                   static bool updateError = false;
                   static uint8_t updateTarget = U_FLASH; // 默认更新程序固件
-
                   if (index == 0) {
                       // Serial.printf("开始接收更新包，总大小: %u 字节\n", (unsigned) total);
                       Update.runAsync(true);
@@ -153,7 +161,7 @@ void WebServerManager::begin() {
                       String type = "flash";
                       if (request->hasParam("firmwareType")) {
                           type = request->getParam("firmwareType")->value();
-                      }else {
+                      } else {
                           if (total > 500000) {
                               type = "fs";
                           }
@@ -164,14 +172,9 @@ void WebServerManager::begin() {
                       } else {
                           updateTarget = U_FLASH;
                       }
-
                       updateBegun = Update.begin(total, updateTarget);
                       updateError = !updateBegun;
-                      if (!updateBegun) {
-                          // Serial.println("Update.begin 失败");
-                      }
                   }
-
                   if (!updateError) {
                       size_t written = Update.write(data, len);
                       if (written != len) {
@@ -179,12 +182,10 @@ void WebServerManager::begin() {
                           // Serial.printf("Update.write 失败，写入 %u/%u 字节\n", (unsigned) written, (unsigned) len);
                       }
                   }
-
                   if (index + len == total) {
                       if (!updateError && Update.end(true)) {
                           // Serial.println("更新成功，即将重启...");
-                          AsyncWebServerResponse *resp = request->beginResponse(
-                              200, "text/plain; charset=utf-8", "更新成功，设备将重启");
+                          AsyncWebServerResponse *resp = request->beginResponse(200,"text/plain; charset=utf-8", "更新成功，设备将重启");
                           resp->addHeader("Connection", "close");
                           request->send(resp);
                           // 在回调外延迟重启，避免在 SYS 上下文中 delay/restart 触发断言
@@ -197,11 +198,10 @@ void WebServerManager::begin() {
                       }
                   }
               });
-
+    server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
     server.onNotFound([](AsyncWebServerRequest *request) {
         request->send(404, "text/plain; charset=utf-8", "页面未找到");
     });
-
     server.begin();
 }
 
