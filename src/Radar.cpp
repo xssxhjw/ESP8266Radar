@@ -342,8 +342,25 @@ void Radar::warning() {
 void Radar::writeLog(const String &line) {
     const auto &cfg = configMgr->getConfig();
     if (!cfg.logEnabled) return;
-    if (!LittleFS.begin()) return;
-    // 检查大小，超过上限则旋转
+    // 将日志行写入内存缓冲，并以阈值/时间间隔批量落盘，避免频繁文件写阻塞音频
+    static String s_buffer;
+    static unsigned long s_lastFlush = 0;
+    const size_t FLUSH_THRESHOLD_BYTES = 1024;     // 累计达到该大小触发落盘
+    const unsigned long FLUSH_INTERVAL_MS = 250;   // 间隔达到该时间触发落盘
+    // 追加到缓冲
+    s_buffer.reserve(2048);
+    s_buffer += line;
+    s_buffer += '\n';
+
+    const unsigned long now = millis();
+    const bool needFlush = (s_buffer.length() >= FLUSH_THRESHOLD_BYTES) ||
+                           (now - s_lastFlush >= FLUSH_INTERVAL_MS);
+
+    if (!needFlush) return; // 还不到落盘条件，快速返回，避免阻塞
+
+    if (!LittleFS.begin()) return; // 文件系统不可用时延迟落盘，保留缓冲
+
+    // 检查大小，超过上限则旋转（仅在落盘时检查，降低开销）
     if (LittleFS.exists("/radar.log")) {
         File rf = LittleFS.open("/radar.log", "r");
         if (rf) {
@@ -359,12 +376,17 @@ void Radar::writeLog(const String &line) {
             }
         }
     }
+
+    // 统一写入并清空缓冲
     File f = LittleFS.open("/radar.log", "a");
     if (!f) {
         f = LittleFS.open("/radar.log", "w");
     }
     if (f) {
-        f.println(line);
+        f.print(s_buffer);
         f.close();
+        s_buffer = "";
+        s_buffer.reserve(2048);
+        s_lastFlush = now;
     }
 }
