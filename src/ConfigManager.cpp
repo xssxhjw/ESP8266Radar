@@ -23,7 +23,6 @@ void ConfigManager::setDefaultConfig() {
 }
 
 bool ConfigManager::loadConfig() {
-    // Serial.println();
     // Serial.println("开始加载配置文件");
     if (!LittleFS.begin()) {
         setDefaultConfig();

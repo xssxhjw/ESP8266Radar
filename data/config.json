@@ -12,5 +12,6 @@
   "centerAngle": 5,
   "audioEnabled": true,
   "startAudio": true,
-  "audioI2S": true
+  "audioI2S": true,
+  "logEnabled": false
 }

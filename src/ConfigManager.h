@@ -17,7 +17,7 @@ struct RadarConfig {
     bool audioEnabled;
     bool audioI2S;
     bool startAudio;    // 是否播放启动音效
-    bool logEnabled;    // 是否记录日志
+    bool logEnabled;
 };
 
 class ConfigManager {
