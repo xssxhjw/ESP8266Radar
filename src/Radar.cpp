@@ -48,14 +48,14 @@ void Radar::triggerLightWarning(bool left, bool right, bool isDanger) {
         leftLightOn = true;
         leftLightOnTime = now;
         leftLightLastBlinkTime = now;
-        leftLightPinState = true; // 更新状态变量
+        leftLightPinState = true;
         digitalWrite(LEFT_LIGHT_PIN, HIGH);
     }
     if (right) {
         rightLightOn = true;
         rightLightOnTime = now;
         rightLightLastBlinkTime = now;
-        rightLightPinState = true; // 更新状态变量
+        rightLightPinState = true;
         digitalWrite(RIGHT_LIGHT_PIN, HIGH);
     }
 }
@@ -161,7 +161,7 @@ void Radar::processTargets(uint8_t targetCount, uint8_t *data) {
             continue;
         }
         if (hasLastTarget && ((lastTarget.distance == target.distance && lastTarget.speed == target.speed && lastTarget.
-                               angle == target.angle) || (now - lastTarget.timestamp) < 1500UL)) {
+                               angle == target.angle) || (now - lastTarget.timestamp) < 1000UL)) {
             if (cfg.logEnabled) {
                 writeLog(String(millis()) + " [target] 与最近目标重复或时间过近，忽略: dist=" + target.distance +
                          ", speed=" + target.speed + ", angle=" + (int) target.angle + ", ts=" + target.timestamp);
@@ -170,7 +170,6 @@ void Radar::processTargets(uint8_t targetCount, uint8_t *data) {
         }
         hasPreTarget = true;
         preTarget = target;
-        // 更新全局最近一次目标（用于1秒内重复去重）
         hasLastTarget = true;
         lastTarget = target;
         const bool isDanger = (target.distance <= cfg.dangerDistance) || (target.speed >= cfg.dangerSpeed);
@@ -178,8 +177,7 @@ void Radar::processTargets(uint8_t targetCount, uint8_t *data) {
         const int8_t centerAngle = (int8_t) cfg.centerAngle; // 中心阈值（±centerAngle° 视为正后方）
         bool left = false;
         bool right = false;
-        if (!cfg.lightAngle) {
-            // 左右同亮模式，不区分方向
+        if (!cfg.lightAngle) {// 左右同亮模式，不区分方向
             left = true;
             right = true;
         } else {
@@ -187,8 +185,7 @@ void Radar::processTargets(uint8_t targetCount, uint8_t *data) {
                 left = true;
             } else if (target.angle >= centerAngle) {
                 right = true;
-            } else {
-                // 正后方同时预警左右灯
+            } else {// 正后方同时预警左右灯
                 left = true;
                 right = true;
             }
@@ -258,12 +255,12 @@ void Radar::updateLightBehavior() {
         // 达到持续时长后，结束预警并熄灭
         if (now - leftLightOnTime >= durationMs) {
             leftLightOn = false;
-            leftLightPinState = false; // 同步更新状态变量
+            leftLightPinState = false;
             digitalWrite(LEFT_LIGHT_PIN, LOW);
         }
         if (now - rightLightOnTime >= durationMs) {
             rightLightOn = false;
-            rightLightPinState = false; // 同步更新状态变量
+            rightLightPinState = false;
             digitalWrite(RIGHT_LIGHT_PIN, LOW);
         }
     }
