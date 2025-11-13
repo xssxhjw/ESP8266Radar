@@ -119,7 +119,7 @@ void Radar::testFunction(String function) {
         path = "/rear.mp3";
         triggerLightWarning(true, true, true);
         playAudio(path);
-    } else if (function == "isDanger") {
+    } else if (function == "danger") {
         path = "/danger.mp3";
         triggerLightWarning(true, true, true);
         playAudio(path);

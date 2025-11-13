@@ -67,9 +67,8 @@ void WebServerManager::begin() {
     });
     server.on("/logs/download", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (LittleFS.exists("/radar.log")) {
-            AsyncWebServerResponse *resp = request->beginResponse(LittleFS, "/radar.log", "application/octet-stream");
-            resp->addHeader("Content-Disposition", "attachment; filename=radar.log");
-            request->send(resp);
+            // 使用内置下载模式，自动设置 Content-Disposition: attachment
+            request->send(LittleFS, "/radar.log", "application/octet-stream", true);
         } else {
             request->send(404, "text/plain; charset=utf-8", "日志不存在");
         }
