@@ -199,12 +199,12 @@ void Radar::processTargets(uint8_t targetCount, uint8_t *data) {
                     + ", speed=" + target.speed + ", ts=" + target.timestamp);
             }
         } else {
+            triggerLightWarning(left, right, isDanger);
             if (cfg.logEnabled) {
                 writeLog(
                     String(millis()) + " [light] 仅灯光预警: left=" + (left ? "1" : "0") + ", right=" + (right ? "1" : "0") +
                     ", danger=" + (isDanger ? "1" : "0") + ", ts=" + target.timestamp);
             }
-            triggerLightWarning(left, right, isDanger);
         }
     }
 }
@@ -252,7 +252,6 @@ void Radar::updateLightBehavior() {
     const unsigned long durationMs = (unsigned long) cfg.blinkDuration * 1000UL;
     const unsigned long now = millis();
     if (!cfg.audioEnabled) {
-        // 达到持续时长后，结束预警并熄灭
         if (now - leftLightOnTime >= durationMs) {
             leftLightOn = false;
             leftLightPinState = false;
@@ -329,7 +328,6 @@ void Radar::warning() {
         if ((unsigned int) bufferIndex >= sizeof(buffer)) {
             bufferIndex = 0;
         }
-        // 尝试解析数据
         if (parseRadarData()) {
             // 数据解析成功，重置缓冲区
             bufferIndex = 0;
@@ -345,21 +343,17 @@ void Radar::writeLog(const String &line) {
     // 将日志行写入内存缓冲，并以阈值/时间间隔批量落盘，避免频繁文件写阻塞音频
     static String s_buffer;
     static unsigned long s_lastFlush = 0;
-    const size_t FLUSH_THRESHOLD_BYTES = 1024;     // 累计达到该大小触发落盘
-    const unsigned long FLUSH_INTERVAL_MS = 250;   // 间隔达到该时间触发落盘
+    const size_t FLUSH_THRESHOLD_BYTES = 2048;     // 累计达到该大小触发落盘
+    const unsigned long FLUSH_INTERVAL_MS = 500;   // 间隔达到该时间触发落盘
     // 追加到缓冲
     s_buffer.reserve(2048);
     s_buffer += line;
     s_buffer += '\n';
 
     const unsigned long now = millis();
-    const bool needFlush = (s_buffer.length() >= FLUSH_THRESHOLD_BYTES) ||
-                           (now - s_lastFlush >= FLUSH_INTERVAL_MS);
-
+    const bool needFlush = (s_buffer.length() >= FLUSH_THRESHOLD_BYTES) || (now - s_lastFlush >= FLUSH_INTERVAL_MS);
     if (!needFlush) return; // 还不到落盘条件，快速返回，避免阻塞
-
     if (!LittleFS.begin()) return; // 文件系统不可用时延迟落盘，保留缓冲
-
     // 检查大小，超过上限则旋转（仅在落盘时检查，降低开销）
     if (LittleFS.exists("/radar.log")) {
         File rf = LittleFS.open("/radar.log", "r");

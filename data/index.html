@@ -661,6 +661,10 @@
             const response = await fetch('/config');
             if (!response.ok) throw new Error();
             const config = await response.json();
+            // 标记：是否已在本次页面会话中自动刷新过日志
+            if (window.__autoRefreshedLogsOnce === undefined) {
+                window.__autoRefreshedLogsOnce = false;
+            }
             document.getElementById('detectionDistance').value = config.detectionDistance || 50;
             document.getElementById('detectionSpeed').value = config.detectionSpeed || 5;
             document.getElementById('dangerDistance').value = config.dangerDistance || 20;
@@ -699,6 +703,11 @@
             toggleAudioSettings();
             updateLogUI();
             toggleAngleOptions();
+            // 配置加载完成后，如果日志启用且尚未自动刷新过，则自动刷新一次
+            if (!!logEnabled && !window.__autoRefreshedLogsOnce) {
+                window.__autoRefreshedLogsOnce = true;
+                await refreshLogs();
+            }
             showMessage('✅ 配置加载成功', 'success')
         } catch (e) {
             showMessage('❌ 配置加载失败', 'error')
@@ -761,8 +770,25 @@
         }
     }
 
+    function formatTsForFilename() {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        const ss = String(d.getSeconds()).padStart(2, '0');
+        return `${y}${m}${day}-${hh}${mm}${ss}`;
+    }
+
     function downloadLogs() {
-        window.location.href = '/logs/download';
+        // 使用带 download 属性的锚点触发，前端也强制下载，文件名使用可读时间戳
+        const a = document.createElement('a');
+        a.href = '/logs/download';
+        a.download = `radar-${formatTsForFilename()}.log`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
     }
 
     async function clearLogs() {
