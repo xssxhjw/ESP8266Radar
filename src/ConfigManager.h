@@ -18,6 +18,14 @@ struct RadarConfig {
     bool audioI2S;
     bool startAudio;    // 是否播放启动音效
     bool logEnabled;
+
+    // 不同音效的实际时长（毫秒），在上传音效后填充
+    unsigned long audioDurationMsNormal;
+    unsigned long audioDurationMsDanger;
+    unsigned long audioDurationMsLeft;
+    unsigned long audioDurationMsRight;
+    unsigned long audioDurationMsRear;
+    unsigned long audioDurationMsStart;
 };
 
 class ConfigManager {

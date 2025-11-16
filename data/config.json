@@ -13,5 +13,11 @@
   "audioEnabled": true,
   "startAudio": true,
   "audioI2S": true,
-  "logEnabled": false
+  "logEnabled": true,
+  "audioDurationMsNormal": 2000,
+  "audioDurationMsDanger": 1000,
+  "audioDurationMsLeft": 1000,
+  "audioDurationMsRight": 1000,
+  "audioDurationMsRear": 1000,
+  "audioDurationMsStart": 1000
 }

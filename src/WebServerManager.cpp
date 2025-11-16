@@ -67,7 +67,8 @@ void WebServerManager::begin() {
     });
     server.on("/logs/download", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (LittleFS.exists("/radar.log")) {
-            request->send(LittleFS, "/radar.log", "application/octet-stream", true);
+            // 不在后端设置 Content-Disposition，以便文件名以“前端 a.download”为准
+            request->send(LittleFS, "/radar.log", "application/octet-stream");
         } else {
             request->send(404, "text/plain; charset=utf-8", "日志不存在");
         }
@@ -139,7 +140,34 @@ void WebServerManager::begin() {
                   }
               });
 
-    server.on("/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
+    server.on("/upload", HTTP_POST, [this](AsyncWebServerRequest *request) {
+                  // 在上传完成后的请求回调中读取表单参数：type 与 durationMs，并写入配置
+                  String type = "";
+                  unsigned long durationMs = 0;
+                  if (request->hasParam("type", true)) {
+                      type = request->getParam("type", true)->value();
+                      type.toLowerCase();
+                  }
+                  if (request->hasParam("durationMs", true)) {
+                      String d = request->getParam("durationMs", true)->value();
+                      durationMs = strtoul(d.c_str(), nullptr, 10);
+                  }
+                  if (durationMs > 0 && type.length() > 0) {
+                      String field;
+                      if (type == "normal") field = "audioDurationMsNormal";
+                      else if (type == "danger") field = "audioDurationMsDanger";
+                      else if (type == "left") field = "audioDurationMsLeft";
+                      else if (type == "right") field = "audioDurationMsRight";
+                      else if (type == "rear") field = "audioDurationMsRear";
+                      else if (type == "start") field = "audioDurationMsStart";
+                      if (field.length() > 0) {
+                          StaticJsonDocument<128> doc;
+                          doc[field] = durationMs;
+                          String body;
+                          serializeJson(doc, body);
+                          configManager->updateConfig(body);
+                      }
+                  }
                   request->send(200, "text/plain; charset=utf-8", "上传完成");
               }, [this](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len,bool final) {
                   handleFileUpload(request, filename, index, data, len, final);

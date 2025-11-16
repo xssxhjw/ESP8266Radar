@@ -42,6 +42,11 @@ private:
     bool leftLightPinState = false;
     bool rightLightPinState = false;
 
+    // 音频播放开始时间，用于最大时长兜底
+    unsigned long audioStartTime = 0;
+    // 当前音频允许的最大播放时长（毫秒），根据文件名和配置决定
+    unsigned long currentMaxAudioMs = 0;
+
     // 全局最近一次目标
     bool hasLastTarget = false;
     RadarTarget lastTarget;
@@ -57,6 +62,10 @@ private:
     void updateLightBehavior();
 
     void writeLog(const String &line);
+
+    void stopAudioAndResetLights();
+
+    unsigned long getMaxAudioMsForPath(const String &path);
 public:
     Radar(ConfigManager *configMgr);
 
@@ -66,7 +75,7 @@ public:
 
     void testFunction(String function);
 
-    void playAudio(String audio);
+    bool playAudio(String audio);
 };
 
 #endif // RADAR_PLAYER_H

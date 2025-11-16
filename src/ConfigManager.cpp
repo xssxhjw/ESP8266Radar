@@ -20,6 +20,14 @@ void ConfigManager::setDefaultConfig() {
     config.audioI2S = true;
     config.startAudio = true;
     config.logEnabled = false;
+
+    // 默认实际时长（同时作为最大播放时长） normal 2s，其它 1s
+    config.audioDurationMsNormal = 2000;
+    config.audioDurationMsDanger = 1000;
+    config.audioDurationMsLeft = 1000;
+    config.audioDurationMsRight = 1000;
+    config.audioDurationMsRear = 1000;
+    config.audioDurationMsStart = 1000;
 }
 
 bool ConfigManager::loadConfig() {
@@ -35,7 +43,7 @@ bool ConfigManager::loadConfig() {
     }
     String jsonString = file.readString();
     file.close();
-    DynamicJsonDocument doc(512);
+    DynamicJsonDocument doc(1024);
     deserializeJson(doc, jsonString);
     config.detectionDistance = doc["detectionDistance"] | config.detectionDistance;
     config.detectionSpeed = doc["detectionSpeed"] | config.detectionSpeed;
@@ -52,6 +60,14 @@ bool ConfigManager::loadConfig() {
     config.audioI2S = doc["audioI2S"] | config.audioI2S;
     config.startAudio = doc["startAudio"] | config.startAudio;
     config.logEnabled = doc["logEnabled"] | config.logEnabled;
+
+    // 读取实际时长（同时作为最大播放时长）
+    config.audioDurationMsNormal = doc["audioDurationMsNormal"] | config.audioDurationMsNormal;
+    config.audioDurationMsDanger = doc["audioDurationMsDanger"] | config.audioDurationMsDanger;
+    config.audioDurationMsLeft = doc["audioDurationMsLeft"] | config.audioDurationMsLeft;
+    config.audioDurationMsRight = doc["audioDurationMsRight"] | config.audioDurationMsRight;
+    config.audioDurationMsRear = doc["audioDurationMsRear"] | config.audioDurationMsRear;
+    config.audioDurationMsStart = doc["audioDurationMsStart"] | config.audioDurationMsStart;
     return true;
 }
 
@@ -59,7 +75,7 @@ bool ConfigManager::saveConfig() {
     if (!LittleFS.begin()) {
         return false;
     }
-    DynamicJsonDocument doc(512);
+    DynamicJsonDocument doc(1024);
     doc["detectionDistance"] = config.detectionDistance;
     doc["detectionSpeed"] = config.detectionSpeed;
     doc["dangerDistance"] = config.dangerDistance;
@@ -75,6 +91,14 @@ bool ConfigManager::saveConfig() {
     doc["audioI2S"] = config.audioI2S;
     doc["startAudio"] = config.startAudio;
     doc["logEnabled"] = config.logEnabled;
+
+    // 实际时长（同时作为最大播放时长）
+    doc["audioDurationMsNormal"] = config.audioDurationMsNormal;
+    doc["audioDurationMsDanger"] = config.audioDurationMsDanger;
+    doc["audioDurationMsLeft"] = config.audioDurationMsLeft;
+    doc["audioDurationMsRight"] = config.audioDurationMsRight;
+    doc["audioDurationMsRear"] = config.audioDurationMsRear;
+    doc["audioDurationMsStart"] = config.audioDurationMsStart;
     File file = LittleFS.open(configFilePath, "w");
     if (!file) {
         return false;
@@ -85,7 +109,7 @@ bool ConfigManager::saveConfig() {
 }
 
 bool ConfigManager::updateConfig(const String &jsonString) {
-    StaticJsonDocument<512> doc;
+    StaticJsonDocument<1024> doc;
     deserializeJson(doc, jsonString);
     config.detectionDistance = doc["detectionDistance"] | config.detectionDistance;
     config.detectionSpeed = doc["detectionSpeed"] | config.detectionSpeed;
@@ -102,6 +126,14 @@ bool ConfigManager::updateConfig(const String &jsonString) {
     config.centerAngle = doc["centerAngle"] | config.centerAngle;
     config.startAudio = doc["startAudio"] | config.startAudio;
     config.logEnabled = doc["logEnabled"] | config.logEnabled;
+
+    // 更新实际音频时长（同时作为最大播放时长）
+    config.audioDurationMsNormal = doc["audioDurationMsNormal"] | config.audioDurationMsNormal;
+    config.audioDurationMsDanger = doc["audioDurationMsDanger"] | config.audioDurationMsDanger;
+    config.audioDurationMsLeft = doc["audioDurationMsLeft"] | config.audioDurationMsLeft;
+    config.audioDurationMsRight = doc["audioDurationMsRight"] | config.audioDurationMsRight;
+    config.audioDurationMsRear = doc["audioDurationMsRear"] | config.audioDurationMsRear;
+    config.audioDurationMsStart = doc["audioDurationMsStart"] | config.audioDurationMsStart;
     return saveConfig();
 }
 
@@ -110,7 +142,7 @@ const RadarConfig &ConfigManager::getConfig() const {
 }
 
 String ConfigManager::getConfigJson() const {
-    DynamicJsonDocument doc(512);
+    DynamicJsonDocument doc(1024);
     doc["warningGain"] = config.warningGain;
     doc["detectionDistance"] = config.detectionDistance;
     doc["detectionSpeed"] = config.detectionSpeed;
@@ -126,6 +158,14 @@ String ConfigManager::getConfigJson() const {
     doc["audioI2S"] = config.audioI2S;
     doc["startAudio"] = config.startAudio;
     doc["logEnabled"] = config.logEnabled;
+
+    // 实际时长（同时作为最大播放时长）
+    doc["audioDurationMsNormal"] = config.audioDurationMsNormal;
+    doc["audioDurationMsDanger"] = config.audioDurationMsDanger;
+    doc["audioDurationMsLeft"] = config.audioDurationMsLeft;
+    doc["audioDurationMsRight"] = config.audioDurationMsRight;
+    doc["audioDurationMsRear"] = config.audioDurationMsRear;
+    doc["audioDurationMsStart"] = config.audioDurationMsStart;
     String result;
     serializeJson(doc, result);
     return result;

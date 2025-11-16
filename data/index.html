@@ -596,33 +596,77 @@
         valueSpan.textContent = slider.value
     }
 
-    function uploadAudioFile(type) {
+    async function uploadAudioFile(type) {
+        const statusDiv = document.getElementById(type + 'AudioStatus');
         const fileInput = document.getElementById(type + 'AudioFile');
         const file = fileInput.files[0];
-        if (!file) {
-            return
+        if (!file) return;
+
+        // 前端校验：大小与时长
+        const MAX_SIZE_BYTES = 51200; // 50KB
+        const MAX_DURATION_SEC = 5;   // 5秒
+        const isMp3 = file.type === 'audio/mpeg' || (file.name || '').toLowerCase().endsWith('.mp3');
+        if (!isMp3) {
+            statusDiv.innerHTML = '<div class="error">❌ 仅支持 .mp3 文件</div>';
+            return;
         }
+        if (file.size > MAX_SIZE_BYTES) {
+            statusDiv.innerHTML = '<div class="error">❌ 文件过大，最大 50KB</div>';
+            return;
+        }
+
+        // 解析音频时长
+        let durationSec = 0;
+        try {
+            durationSec = await getAudioDuration(file);
+        } catch (e) {
+            statusDiv.innerHTML = '<div class="error">❌ 无法解析音频时长</div>';
+            return;
+        }
+        if (!isFinite(durationSec) || durationSec <= 0) {
+            statusDiv.innerHTML = '<div class="error">❌ 音频时长无效</div>';
+            return;
+        }
+        if (durationSec > MAX_DURATION_SEC) {
+            statusDiv.innerHTML = '<div class="error">❌ 时长超过限制（最大 5 秒）</div>';
+            return;
+        }
+
+        // 上传：附带类型与解析出的实际时长（毫秒），由后端保存到配置
         const formData = new FormData();
-        const nameMap = {
-            normal: 'normal.mp3',
-            danger: 'danger.mp3',
-            left: 'left.mp3',
-            right: 'right.mp3',
-            rear: 'rear.mp3',
-            start: 'start.mp3'
-        };
+        const nameMap = { normal: 'normal.mp3', danger: 'danger.mp3', left: 'left.mp3', right: 'right.mp3', rear: 'rear.mp3', start: 'start.mp3' };
         const fileName = nameMap[type] || 'normal.mp3';
         formData.append('file', file, fileName);
-        const statusDiv = document.getElementById(type + 'AudioStatus');
+        formData.append('type', type);
+        formData.append('durationMs', String(Math.round(durationSec * 1000)));
         statusDiv.innerHTML = '<div class="success">正在上传...</div>';
-        fetch('/upload', {method: 'POST', body: formData}).then(response => response.text()).then(data => {
+        try {
+            const resp = await fetch('/upload', { method: 'POST', body: formData });
+            if (!resp.ok) throw new Error('上传失败');
             statusDiv.innerHTML = '<div class="success">✅ 上传成功</div>';
-            setTimeout(() => {
-                statusDiv.innerHTML = ''
-            }, 3000)
-        }).catch(error => {
-            statusDiv.innerHTML = '<div class="error">❌ 上传失败: ' + error + '</div>'
-        })
+            setTimeout(() => { statusDiv.innerHTML = '' }, 3000);
+        } catch (error) {
+            statusDiv.innerHTML = '<div class="error">❌ 上传失败: ' + (error && error.message || error) + '</div>';
+        }
+    }
+
+    function getAudioDuration(file) {
+        return new Promise((resolve, reject) => {
+            const url = URL.createObjectURL(file);
+            const audio = new Audio();
+            let timeoutId = null;
+            const cleanup = () => {
+                URL.revokeObjectURL(url);
+                audio.src = '';
+                if (timeoutId) clearTimeout(timeoutId);
+            };
+            audio.preload = 'metadata';
+            audio.onloadedmetadata = () => { const d = audio.duration; cleanup(); isFinite(d) && d > 0 ? resolve(d) : reject(new Error('invalid duration')); };
+            audio.onerror = () => { cleanup(); reject(new Error('metadata error')); };
+            // 超时保护，避免部分浏览器元数据解析挂起
+            timeoutId = setTimeout(() => { cleanup(); reject(new Error('metadata timeout')); }, 3000);
+            audio.src = url;
+        });
     }
 
     async function saveConfig() {
@@ -661,10 +705,6 @@
             const response = await fetch('/config');
             if (!response.ok) throw new Error();
             const config = await response.json();
-            // 标记：是否已在本次页面会话中自动刷新过日志
-            if (window.__autoRefreshedLogsOnce === undefined) {
-                window.__autoRefreshedLogsOnce = false;
-            }
             document.getElementById('detectionDistance').value = config.detectionDistance || 50;
             document.getElementById('detectionSpeed').value = config.detectionSpeed || 5;
             document.getElementById('dangerDistance').value = config.dangerDistance || 20;
@@ -703,11 +743,6 @@
             toggleAudioSettings();
             updateLogUI();
             toggleAngleOptions();
-            // 配置加载完成后，如果日志启用且尚未自动刷新过，则自动刷新一次
-            if (!!logEnabled && !window.__autoRefreshedLogsOnce) {
-                window.__autoRefreshedLogsOnce = true;
-                await refreshLogs();
-            }
             showMessage('✅ 配置加载成功', 'success')
         } catch (e) {
             showMessage('❌ 配置加载失败', 'error')
@@ -750,8 +785,7 @@
         if (actions) actions.style.display = enabled ? 'block' : 'none';
         if (contentWrap) contentWrap.style.display = enabled ? 'block' : 'none';
         if (enabled) {
-            const content = document.getElementById('logContent');
-            if (content && !content.textContent) content.textContent = '点击“刷新日志”查看最新内容';
+           refreshLogs();
         }
     }
 

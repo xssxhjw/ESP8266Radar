@@ -60,31 +60,26 @@ void Radar::triggerLightWarning(bool left, bool right, bool isDanger) {
     }
 }
 
-void Radar::playAudio(String audio) {
-    const auto &cfg = configMgr->getConfig();
-    if (!cfg.audioEnabled) {
-        return;
-    }
+bool Radar::playAudio(String audio) {
     if (mp3 == nullptr) {
         mp3 = new AudioGeneratorMP3();
     }
     if (mp3->isRunning()) {
-        return;
+        return false;
     }
+    const auto &cfg = configMgr->getConfig();
     file = new AudioFileSourceLittleFS(audio.c_str());
     out->SetGain(cfg.warningGain);
-    mp3->begin(file, out);
+    bool ok = mp3->begin(file, out);
+    if (ok) {
+        audioStartTime = millis();
+        currentMaxAudioMs = getMaxAudioMsForPath(audio);
+    }
+    return ok;
 }
 
 
 void Radar::triggerAudioWarning(bool left, bool right, bool isDanger) {
-    if (mp3 == nullptr) {
-        mp3 = new AudioGeneratorMP3();
-    }
-    if (mp3->isRunning()) {
-        return;
-    }
-    triggerLightWarning(left, right, isDanger);
     const auto &cfg = configMgr->getConfig();
     String path;
     if (isDanger) {
@@ -102,34 +97,45 @@ void Radar::triggerAudioWarning(bool left, bool right, bool isDanger) {
             path = "/normal.mp3";
         }
     }
-    playAudio(path);
+    if (playAudio(path)) {
+        triggerLightWarning(left, right, isDanger);
+    }
 }
 
 void Radar::testFunction(String function) {
     String path;
+    bool isDanger = true;
+    bool left = false;
+    bool right = false;
     if (function == "left") {
         path = "/left.mp3";
-        triggerLightWarning(true, false, true);
-        playAudio(path);
+        left = true;
     } else if (function == "right") {
         path = "/right.mp3";
-        triggerLightWarning(false, true, true);
-        playAudio(path);
+        right = true;
     } else if (function == "rear") {
         path = "/rear.mp3";
-        triggerLightWarning(true, true, true);
-        playAudio(path);
+        left = true;
+        right = true;
     } else if (function == "danger") {
         path = "/danger.mp3";
-        triggerLightWarning(true, true, true);
-        playAudio(path);
+        left = true;
+        right = true;
     } else if (function == "normal") {
         path = "/normal.mp3";
-        triggerLightWarning(true, true, false);
-        playAudio(path);
+        left = true;
+        right = true;
+        isDanger = false;
     } else if (function == "start") {
         path = "/start.mp3";
-        playAudio(path);
+    }
+    const auto &cfg = configMgr->getConfig();
+    if (cfg.audioEnabled) {
+        if (playAudio(path)) {
+            triggerLightWarning(left, right, isDanger);
+        }
+    } else {
+        triggerLightWarning(left, right, isDanger);
     }
 }
 
@@ -177,7 +183,7 @@ void Radar::processTargets(uint8_t targetCount, uint8_t *data) {
         const int8_t centerAngle = (int8_t) cfg.centerAngle; // 中心阈值（±centerAngle° 视为正后方）
         bool left = false;
         bool right = false;
-        if (!cfg.lightAngle) {// 左右同亮模式，不区分方向
+        if (!cfg.lightAngle) {
             left = true;
             right = true;
         } else {
@@ -185,7 +191,7 @@ void Radar::processTargets(uint8_t targetCount, uint8_t *data) {
                 left = true;
             } else if (target.angle >= centerAngle) {
                 right = true;
-            } else {// 正后方同时预警左右灯
+            } else {
                 left = true;
                 right = true;
             }
@@ -296,28 +302,19 @@ void Radar::updateLightBehavior() {
 }
 
 void Radar::warning() {
-    if (configMgr->getConfig().audioEnabled) {
-        if (mp3 != nullptr && mp3->isRunning() && !mp3->loop()) {
-            mp3->stop();
-            if (file != nullptr) {
-                file->close();
-                delete file;
+    const auto &cfg = configMgr->getConfig();
+    if (cfg.audioEnabled && mp3 != nullptr) {
+        if (mp3->isRunning()) {
+            if (!mp3->loop()) {
+                stopAudioAndResetLights();
+            } else {
+                unsigned long maxMs = currentMaxAudioMs > 0 ? currentMaxAudioMs : 1000UL;
+                if (millis() - audioStartTime > maxMs) {
+                    stopAudioAndResetLights();
+                }
             }
-            file = nullptr;
-            leftLightOn = false;
-            rightLightOn = false;
-            leftLightPinState = false;
-            rightLightPinState = false;
-            digitalWrite(LEFT_LIGHT_PIN, LOW);
-            digitalWrite(RIGHT_LIGHT_PIN, LOW);
-            if (configMgr->getConfig().logEnabled) {
-                unsigned long __now = millis();
-                writeLog(String(__now) + " [audio] 结束播放，灯光复位，目标 " +
-                         (hasLastTarget
-                              ? (String("dist=") + lastTarget.distance + "，speed=" + lastTarget.speed +
-                                 "，angle=" + (int) lastTarget.angle + "，ts=" + lastTarget.timestamp)
-                              : String("none")));
-            }
+        } else {
+            stopAudioAndResetLights();
         }
     }
     // 读取雷达数据
@@ -337,16 +334,64 @@ void Radar::warning() {
     updateLightBehavior();
 }
 
+void Radar::stopAudioAndResetLights() {
+    if (mp3 != nullptr) {
+        mp3->stop();
+    }
+    if (file != nullptr) {
+        file->close();
+        delete file;
+        file = nullptr;
+    }
+    audioStartTime = 0;
+    currentMaxAudioMs = 0;
+    leftLightOn = false;
+    rightLightOn = false;
+    leftLightPinState = false;
+    rightLightPinState = false;
+    digitalWrite(LEFT_LIGHT_PIN, LOW);
+    digitalWrite(RIGHT_LIGHT_PIN, LOW);
+    const auto &cfg = configMgr->getConfig();
+    if (cfg.logEnabled) {
+        unsigned long __now = millis();
+        writeLog(String(__now) + " [audio] 结束播放，灯光复位，目标 " +
+                 (hasLastTarget
+                      ? (String("dist=") + lastTarget.distance + "，speed=" + lastTarget.speed +
+                         "，angle=" + (int) lastTarget.angle + "，ts=" + lastTarget.timestamp)
+                      : String("none")));
+    }
+}
+
+unsigned long Radar::getMaxAudioMsForPath(const String &path) {
+    const auto &cfg = configMgr->getConfig();
+    if (path.endsWith("/normal.mp3") || path == "/normal.mp3") {
+        return cfg.audioDurationMsNormal ? cfg.audioDurationMsNormal : 2000UL;
+    } else if (path.endsWith("/danger.mp3") || path == "/danger.mp3") {
+        return cfg.audioDurationMsDanger ? cfg.audioDurationMsDanger : 1000UL;
+    } else if (path.endsWith("/left.mp3") || path == "/left.mp3") {
+        return cfg.audioDurationMsLeft ? cfg.audioDurationMsLeft : 1000UL;
+    } else if (path.endsWith("/right.mp3") || path == "/right.mp3") {
+        return cfg.audioDurationMsRight ? cfg.audioDurationMsRight : 1000UL;
+    } else if (path.endsWith("/rear.mp3") || path == "/rear.mp3") {
+        return cfg.audioDurationMsRear ? cfg.audioDurationMsRear : 1000UL;
+    } else if (path.endsWith("/start.mp3") || path == "/start.mp3") {
+        return cfg.audioDurationMsStart ? cfg.audioDurationMsStart : 1000UL;
+    }
+    // 默认其它文件 1000ms
+    return 1000UL;
+}
+
 void Radar::writeLog(const String &line) {
     const auto &cfg = configMgr->getConfig();
     if (!cfg.logEnabled) return;
     // 将日志行写入内存缓冲，并以阈值/时间间隔批量落盘，避免频繁文件写阻塞音频
     static String s_buffer;
     static unsigned long s_lastFlush = 0;
-    const size_t FLUSH_THRESHOLD_BYTES = 2048;     // 累计达到该大小触发落盘
-    const unsigned long FLUSH_INTERVAL_MS = 500;   // 间隔达到该时间触发落盘
+    const size_t FLUSH_THRESHOLD_BYTES = 2048; // 累计达到该大小触发落盘
+    const unsigned long FLUSH_INTERVAL_MS = 500; // 间隔达到该时间触发落盘
     // 追加到缓冲
-    s_buffer.reserve(2048);
+    // 预留与刷新阈值一致的容量，避免频繁扩容导致的碎片与开销
+    s_buffer.reserve(FLUSH_THRESHOLD_BYTES);
     s_buffer += line;
     s_buffer += '\n';
 
@@ -380,7 +425,7 @@ void Radar::writeLog(const String &line) {
         f.print(s_buffer);
         f.close();
         s_buffer = "";
-        s_buffer.reserve(2048);
+        s_buffer.reserve(FLUSH_THRESHOLD_BYTES);
         s_lastFlush = now;
     }
 }
