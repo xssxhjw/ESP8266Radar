@@ -278,24 +278,16 @@ void Radar::updateLightBehavior() {
             leftLightPinState = !leftLightPinState; // 使用状态变量翻转
             digitalWrite(LEFT_LIGHT_PIN, leftLightPinState ? HIGH : LOW);
             leftLightLastBlinkTime = now;
-            if (cfg.logEnabled) {
-                writeLog(String(millis()) + " [blink] 左灯切换 -> " + (leftLightPinState ? "HIGH" : "LOW") +
-                         "，目标 " + (hasLastTarget
-                                       ? (String("dist=") + lastTarget.distance + "，speed=" + lastTarget.speed +
-                                          "，angle=" + (int) lastTarget.angle + "，ts=" + lastTarget.timestamp)
-                                       : String("none")));
+            if (cfg.logEnabled && hasLastTarget) {
+                writeLog(String(millis()) + " [blink] 左灯切换 -> " + (leftLightPinState ? "HIGH" : "LOW") +"，目标 " +  (String("dist=") + lastTarget.distance + "，speed=" + lastTarget.speed +"，angle=" + (int) lastTarget.angle + "，ts=" + lastTarget.timestamp));
             }
         }
         if (rightLightOn && (now - rightLightLastBlinkTime >= blinkInterval)) {
-            rightLightPinState = !rightLightPinState; // 使用状态变量翻转
+            rightLightPinState = !rightLightPinState;
             digitalWrite(RIGHT_LIGHT_PIN, rightLightPinState ? HIGH : LOW);
             rightLightLastBlinkTime = now;
-            if (cfg.logEnabled) {
-                writeLog(String(millis()) + " [blink] 右灯切换 -> " + (rightLightPinState ? "HIGH" : "LOW") +
-                         "，目标 " + (hasLastTarget
-                                       ? (String("dist=") + lastTarget.distance + "，speed=" + lastTarget.speed +
-                                          "，angle=" + (int) lastTarget.angle + "，ts=" + lastTarget.timestamp)
-                                       : String("none")));
+            if (cfg.logEnabled && hasLastTarget) {
+                writeLog(String(millis()) + " [blink] 右灯切换 -> " + (leftLightPinState ? "HIGH" : "LOW") +"，目标 " +  (String("dist=") + lastTarget.distance + "，speed=" + lastTarget.speed +"，angle=" + (int) lastTarget.angle + "，ts=" + lastTarget.timestamp));
             }
         }
     }
@@ -304,16 +296,21 @@ void Radar::updateLightBehavior() {
 void Radar::warning() {
     const auto &cfg = configMgr->getConfig();
     if (cfg.audioEnabled && mp3 != nullptr) {
+        bool needStop = false;
         if (mp3->isRunning()) {
             if (!mp3->loop()) {
-                stopAudioAndResetLights();
+                needStop = true;
             } else {
                 unsigned long maxMs = currentMaxAudioMs > 0 ? currentMaxAudioMs : 1000UL;
                 if (millis() - audioStartTime > maxMs) {
-                    stopAudioAndResetLights();
+                    needStop = true;
                 }
             }
+            yield();
         } else {
+            needStop = true;
+        }
+        if (needStop) {
             stopAudioAndResetLights();
         }
     }
@@ -335,7 +332,7 @@ void Radar::warning() {
 }
 
 void Radar::stopAudioAndResetLights() {
-    if (mp3 != nullptr) {
+    if (mp3 != nullptr && mp3->isRunning()) {
         mp3->stop();
     }
     if (file != nullptr) {
@@ -352,13 +349,9 @@ void Radar::stopAudioAndResetLights() {
     digitalWrite(LEFT_LIGHT_PIN, LOW);
     digitalWrite(RIGHT_LIGHT_PIN, LOW);
     const auto &cfg = configMgr->getConfig();
-    if (cfg.logEnabled) {
+    if (cfg.logEnabled && hasLastTarget) {
         unsigned long __now = millis();
-        writeLog(String(__now) + " [audio] 结束播放，灯光复位，目标 " +
-                 (hasLastTarget
-                      ? (String("dist=") + lastTarget.distance + "，speed=" + lastTarget.speed +
-                         "，angle=" + (int) lastTarget.angle + "，ts=" + lastTarget.timestamp)
-                      : String("none")));
+        writeLog(String(__now) + " [audio] 结束播放，灯光复位，目标 " +( (String("dist=") + lastTarget.distance + "，speed=" + lastTarget.speed +"，angle=" + (int) lastTarget.angle + "，ts=" + lastTarget.timestamp)));
     }
 }
 
