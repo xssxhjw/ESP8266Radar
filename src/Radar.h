@@ -11,6 +11,8 @@
 
 #define LEFT_LIGHT_PIN D1
 #define RIGHT_LIGHT_PIN D2
+#define REAR_LEFT_LIGHT_PIN D0
+#define REAR_RIGHT_LIGHT_PIN D10
 
 struct RadarTarget {
     bool approaching;
