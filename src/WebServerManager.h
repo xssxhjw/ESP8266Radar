@@ -6,7 +6,7 @@
 class Radar; // 前向声明
 
 #ifndef FIRMWARE_VERSION
-#define FIRMWARE_VERSION "1.5"
+#define FIRMWARE_VERSION "1.7"
 #endif
 #ifndef BUILD_TIME
 #define BUILD_TIME __DATE__ " " __TIME__

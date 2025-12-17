@@ -30,13 +30,10 @@ void Radar::begin() {
     pinMode(RIGHT_LIGHT_PIN, OUTPUT);
     digitalWrite(RIGHT_LIGHT_PIN, LOW);
     rightLightPinState = false;
-    pinMode(REAR_LEFT_LIGHT_PIN, OUTPUT);
-    pinMode(REAR_RIGHT_LIGHT_PIN, OUTPUT);
-    digitalWrite(REAR_LEFT_LIGHT_PIN, HIGH);
-    digitalWrite(REAR_RIGHT_LIGHT_PIN, HIGH);
-    delay(1000);
-    digitalWrite(REAR_LEFT_LIGHT_PIN, LOW);
-    digitalWrite(REAR_RIGHT_LIGHT_PIN, LOW);
+    pinMode(REAR_LIGHT_PIN, OUTPUT);
+    digitalWrite(REAR_LIGHT_PIN, HIGH);
+    delay(2000);
+    digitalWrite(REAR_LIGHT_PIN, LOW);
     if (cfg.audioEnabled && cfg.startAudio) {
         playAudio("/start.mp3");
     }
@@ -54,7 +51,7 @@ void Radar::triggerLightWarning(bool left, bool right, bool isDanger) {
         leftLightLastBlinkTime = now;
         leftLightPinState = true;
         digitalWrite(LEFT_LIGHT_PIN, HIGH);
-        digitalWrite(REAR_LEFT_LIGHT_PIN, HIGH);
+        digitalWrite(REAR_LIGHT_PIN, HIGH);
     }
     if (right) {
         rightLightOn = true;
@@ -62,7 +59,7 @@ void Radar::triggerLightWarning(bool left, bool right, bool isDanger) {
         rightLightLastBlinkTime = now;
         rightLightPinState = true;
         digitalWrite(RIGHT_LIGHT_PIN, HIGH);
-        digitalWrite(REAR_RIGHT_LIGHT_PIN, HIGH);
+        digitalWrite(REAR_LIGHT_PIN, HIGH);
     }
 }
 
@@ -268,13 +265,13 @@ void Radar::updateLightBehavior() {
             leftLightOn = false;
             leftLightPinState = false;
             digitalWrite(LEFT_LIGHT_PIN, LOW);
-            digitalWrite(REAR_LEFT_LIGHT_PIN, LOW);
+            digitalWrite(REAR_LIGHT_PIN, LOW);
         }
         if (now - rightLightOnTime >= durationMs) {
             rightLightOn = false;
             rightLightPinState = false;
             digitalWrite(RIGHT_LIGHT_PIN, LOW);
-            digitalWrite(REAR_RIGHT_LIGHT_PIN, LOW);
+            digitalWrite(REAR_LIGHT_PIN, LOW);
         }
     }
     if (!leftLightOn && !rightLightOn) {
@@ -285,7 +282,7 @@ void Radar::updateLightBehavior() {
         if (leftLightOn && (now - leftLightLastBlinkTime >= blinkInterval)) {
             leftLightPinState = !leftLightPinState;
             digitalWrite(LEFT_LIGHT_PIN, leftLightPinState ? HIGH : LOW);
-            digitalWrite(REAR_LEFT_LIGHT_PIN, leftLightPinState ? HIGH : LOW);
+            digitalWrite(REAR_LIGHT_PIN, leftLightPinState ? HIGH : LOW);
             leftLightLastBlinkTime = now;
             if (cfg.logEnabled && hasLastTarget) {
                 writeLog(String(millis()) + " [blink] 左灯切换 -> " + (leftLightPinState ? "HIGH" : "LOW") +"，目标 " +  (String("dist=") + lastTarget.distance + "，speed=" + lastTarget.speed +"，angle=" + (int) lastTarget.angle + "，ts=" + lastTarget.timestamp));
@@ -294,7 +291,7 @@ void Radar::updateLightBehavior() {
         if (rightLightOn && (now - rightLightLastBlinkTime >= blinkInterval)) {
             rightLightPinState = !rightLightPinState;
             digitalWrite(RIGHT_LIGHT_PIN, rightLightPinState ? HIGH : LOW);
-            digitalWrite(REAR_RIGHT_LIGHT_PIN, rightLightPinState ? HIGH : LOW);
+            digitalWrite(REAR_LIGHT_PIN, rightLightPinState ? HIGH : LOW);
             rightLightLastBlinkTime = now;
             if (cfg.logEnabled && hasLastTarget) {
                 writeLog(String(millis()) + " [blink] 右灯切换 -> " + (leftLightPinState ? "HIGH" : "LOW") +"，目标 " +  (String("dist=") + lastTarget.distance + "，speed=" + lastTarget.speed +"，angle=" + (int) lastTarget.angle + "，ts=" + lastTarget.timestamp));
@@ -358,8 +355,7 @@ void Radar::stopAudioAndResetLights() {
     rightLightPinState = false;
     digitalWrite(LEFT_LIGHT_PIN, LOW);
     digitalWrite(RIGHT_LIGHT_PIN, LOW);
-    digitalWrite(REAR_LEFT_LIGHT_PIN, LOW);
-    digitalWrite(REAR_RIGHT_LIGHT_PIN, LOW);
+    digitalWrite(REAR_LIGHT_PIN, LOW);
     const auto &cfg = configMgr->getConfig();
     if (cfg.logEnabled && hasLastTarget) {
         unsigned long __now = millis();
